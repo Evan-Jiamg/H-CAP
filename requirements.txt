@@ -1,0 +1,9 @@
+Flask==2.3.3
+python-dotenv
+numpy_financial
+qrcode[pil]
+requests
+SpeechRecognition
+pydub
+groq
+flask-session

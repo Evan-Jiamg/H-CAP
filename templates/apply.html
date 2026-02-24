@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H-CAP 信用卡申請</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        body { background-color: #f8f9fa; padding-top: 80px; }
+        .form-section { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .section-title { border-left: 5px solid #0d6efd; padding-left: 15px; margin-bottom: 20px; font-weight: bold; }
+        .btn-submit { padding: 15px 30px; font-size: 1.2rem; font-weight: bold; }
+        .verified-field { background-color: #e8f5e9 !important; border-color: #28a745 !important; color: #155724; font-weight: bold; opacity: 1 !important; }
+        .vc-locked-field { background-color: #d5d8dc !important; border-color: #adb5bd !important; color: #495057 !important; font-weight: bold; opacity: 1 !important; cursor: not-allowed; }
+        .optional-section { border: 2px dashed #dee2e6; padding: 20px; border-radius: 10px; background-color: #f8f9fa; }
+        .back-buttons-group { position: fixed; top: 20px; left: 20px; z-index: 1000; display: flex; gap: 10px; }
+        .back-button { background: white; border: 2px solid #dee2e6; border-radius: 8px; padding: 10px 20px; text-decoration: none; color: #495057; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; display: flex; align-items: center; }
+        .back-button:hover { background: #f8f9fa; color: #212529; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .vc-status-banner { padding: 12px 20px; border-radius: 10px; display: flex; align-items: center; gap: 10px; font-weight: 600; }
+        .vc-status-banner.verified { background: #d1e7dd; color: #0f5132; border: 1px solid #badbcc; }
+        .vc-status-banner.not-verified { background: #f8d7da; color: #842029; border: 1px solid #f5c2c7; }
+    </style>
+</head>
+<body>
+    <div class="back-buttons-group">
+        <a href="/portal/customer" class="back-button"><i class="fas fa-arrow-left me-2"></i>返回移工端服務</a>
+        <a href="/" class="back-button"><i class="fas fa-home me-2"></i>首頁</a>
+    </div>
+
+<div class="container mb-5">
+    <div class="text-center mb-5">
+        <h1 class="fw-bold text-primary"><i class="fas fa-credit-card me-3"></i>H-CAP 移工專屬信用卡申請</h1>
+        <p class="text-muted">填寫資料 -> AI 實時運算 -> 信用變現</p>
+    </div>
+
+    <form id="applicationForm" enctype="multipart/form-data">
+
+        <!-- VC Verification Status Banner -->
+        <div class="form-section">
+            <h4 class="section-title">1. 數位憑證驗證 (VC Verification)</h4>
+            <div id="vcStatusBanner" class="vc-status-banner not-verified">
+                <i class="fas fa-exclamation-circle"></i>
+                <span>尚未完成數位憑證驗證，請先前往驗證。</span>
+            </div>
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <div class="card border-primary">
+                        <div class="card-body text-center p-3">
+                            <small class="fw-bold"><i class="fas fa-id-card text-primary me-2"></i> 居留證驗證</small>
+                            <div id="applyArcStatus" class="mt-2 text-danger"><i class="fas fa-exclamation-circle"></i> 未驗證</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-success">
+                        <div class="card-body text-center p-3">
+                            <small class="fw-bold"><i class="fas fa-file-contract text-success me-2"></i> 勞動契約驗證</small>
+                            <div id="applyContractStatus" class="mt-2 text-danger"><i class="fas fa-exclamation-circle"></i> 未驗證</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <a href="/credential_verify?next=apply" class="btn btn-primary btn-lg px-5 py-3 fw-bold rounded-pill shadow" id="goVerifyBtn" style="font-size: 1.15rem;">
+                    <i class="fas fa-qrcode me-2"></i>前往數位憑證驗證
+                </a>
+            </div>
+        </div>
+
+        <!-- Section 2: KYC -->
+        <div class="form-section">
+            <h4 class="section-title">2. 個人基本資料 (KYC)</h4>
+            <div class="row g-3">
+                
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">英文姓名 (Official English Name)</label> 
+                    <input type="text" class="form-control vc-locked-field" name="english_name" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">出生日期 (Date of Birth)</label>
+                    <div class="input-group">
+                        <span class="input-group-text">民國</span>
+                        <input type="number" class="form-control" name="birth_year_roc" placeholder="XX" min="1" max="120" style="max-width: 80px;" required>
+                        <span class="input-group-text">年</span>
+                        <input type="number" class="form-control" name="birth_month" placeholder="XX" min="1" max="12" style="max-width: 70px;" required>
+                        <span class="input-group-text">月</span>
+                        <input type="number" class="form-control" name="birth_day" placeholder="XX" min="1" max="31" style="max-width: 70px;" required>
+                        <span class="input-group-text">日</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">護照號碼 (Passport No.)</label>
+                    <input type="text" class="form-control" name="passport_no" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">國籍 (Nationality)</label>
+                    <select class="form-select" name="country">
+                        <option value="Vietnam">越南 (Vietnam)</option>
+                        <option value="Indonesia">印尼 (Indonesia)</option>
+                        <option value="Philippines">菲律賓 (Philippines)</option>
+                        <option value="Thailand">泰國 (Thailand)</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold">戶籍 / 居住地址 (Residential Address)</label>
+                    <input type="text" class="form-control" name="residential_address" placeholder="請輸入目前居住地址" required>
+                </div>
+
+                <div class="col-12"><hr><small class="text-muted fw-bold"><i class="fas fa-id-card text-primary me-1"></i> 居留證資訊 (ARC Info) — 由數位憑證自動帶入</small></div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">統一證號 (ui_num)</label>
+                    <input type="text" class="form-control vc-locked-field" name="arc_no" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">核發日期 (issue_date)</label>
+                    <input type="text" class="form-control vc-locked-field" name="arc_issue_date" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">居留到期日 (expiry_date)</label>
+                    <input type="text" class="form-control vc-locked-field" name="arc_expiry" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">卡片編號 (card_num)</label>
+                    <input type="text" class="form-control vc-locked-field" name="arc_card_num" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Career & Financial -->
+        <div class="form-section">
+            <h4 class="section-title">3. 職業與財務 (Career & Financial)</h4>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">跨境匯款習慣 (Cross-border Remittance)</label>
+                    <div class="input-group">
+                        <select class="form-select bg-light" id="remittanceSelect" name="remittance_habit_display" disabled>
+                            <option value="none" selected>⚠️ 未驗證 (Unverified)</option>
+                            <option value="regular">每月固定匯款 (Regular Monthly)</option>
+                            <option value="irregular">不定期 (Irregular)</option>
+                        </select>
+                        <input type="hidden" name="remittance_habit" id="remittanceHidden" value="none">
+                        <input type="hidden" name="exact_remittance_score" id="exactRemittanceScore" value="">
+                        <a href="/remittance" target="_blank" class="btn btn-outline-primary" id="checkBankBtn">
+                            <i class="fas fa-search me-1"></i> 查詢系統
+                        </a>
+                    </div>
+                    <div class="form-text text-danger" id="remittanceHelp"><i class="fas fa-exclamation-circle"></i> 此欄位已鎖定，必須點擊查詢。</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">領薪方式 (Payment Method)</label>
+                    <select class="form-select" name="pay_method">
+                        <option value="bank">銀行轉帳 (Bank Transfer)</option>
+                        <option value="cash">現金領取 (Cash)</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold"><i class="fas fa-file-csv text-success me-1"></i>生成電子存摺交易明細 (Generate Bank Statement)</label>
+                    <button type="button" class="btn btn-outline-success w-100" id="btnGenerateStatement" onclick="generateBankStatement()">
+                        <i class="fas fa-cog me-1"></i>自動生成 6 個月交易明細
+                    </button>
+                    <div class="form-text"><i class="fas fa-info-circle me-1"></i>依據勞動契約的公司名稱與底薪，自動生成模擬存摺交易紀錄</div>
+                    <div id="statementPreview" class="mt-3" style="display:none;">
+                        <div class="alert alert-success py-2 d-flex align-items-center">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span>已生成 6 個月交易明細</span>
+                            <button type="button" class="btn btn-sm btn-outline-primary ms-auto" onclick="toggleStatementTable()">
+                                <i class="fas fa-eye me-1"></i>查看內容
+                            </button>
+                        </div>
+                        <div id="statementTable" style="display:none; max-height:400px; overflow-y:auto;">
+                        </div>
+                    </div>
+                    <input type="hidden" name="bank_statement_data" id="bankStatementData">
+                </div>
+                <div class="col-12"><hr><small class="text-muted fw-bold"><i class="fas fa-file-contract text-success me-1"></i> 勞動契約資訊 (Labor Contract Info) — 由數位憑證自動帶入</small></div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">公司名稱 (Company Name)</label>
+                    <input type="text" class="form-control vc-locked-field" name="company_name" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">公司電話 (Company Telephone)</label>
+                    <input type="text" class="form-control vc-locked-field" name="company_phone" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-bold">公司地址 (Company Address)</label>
+                    <input type="text" class="form-control vc-locked-field" name="address" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">工作職位 (Job Title)</label>
+                    <input type="text" class="form-control vc-locked-field" name="job_title" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">月支薪資 (Monthly Wages)</label>
+                    <input type="number" class="form-control vc-locked-field" name="base_salary" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                 <div class="col-md-12">
+                    <label class="form-label fw-bold">合約到期時間 (Contract Expiry Date)</label>
+                    <input type="text" class="form-control vc-locked-field" name="contract_expiry" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">人力仲介公司名稱 (Agency Name)</label>
+                    <input type="text" class="form-control vc-locked-field" name="agency_name" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">人力仲介公司電話 (Agency Telephone)</label>
+                    <input type="text" class="form-control vc-locked-field" name="agency_phone" placeholder="由數位憑證帶入" readonly tabindex="-1" required>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Voice Verification (Optional) -->
+        <div class="form-section optional-section">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h4 class="section-title mb-0">4. 語音驗證 (Voice Verification - Optional)</h4>
+                <span class="badge bg-secondary">可選功能</span>
+            </div>
+            <div class="d-flex align-items-center gap-3 mb-3">
+                <input class="form-check-input" type="checkbox" id="applyEnableVoiceVerify" onchange="toggleApplyVoiceSection()" style="width: 4rem; height: 2rem; cursor: pointer;">
+                <label class="form-check-label fw-bold" for="applyEnableVoiceVerify" style="font-size: 1.3rem;">
+                    <i class="fas fa-video me-2"></i>同意錄音 + 錄影 (Agree to Record)
+                </label>
+            </div>
+            <div id="applyVoiceSection" style="display: none;">
+                <div class="text-center" id="applyVoiceBtnArea">
+                    <a href="/voice_ai?next=apply&client_id=custom" target="_blank" class="btn btn-info btn-lg rounded-pill px-5" id="applyVoiceBtn">前往語音 AI 驗證</a>
+                </div>
+                <div id="applyVoiceDone" class="alert alert-success text-center mt-3" style="display: none;">
+                    <i class="fas fa-check-circle me-2"></i> <strong>語音驗證已完成！</strong> <span id="applyVoiceScoreText"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="text-center">
+            <button type="button" onclick="submitApplication()" class="btn btn-primary btn-submit w-100 rounded-pill shadow">
+                <i class="fas fa-paper-plane me-2"></i> 送出申請 (Submit)
+            </button>
+        </div>
+    </form>
+</div>
+
+<div class="modal fade" id="resultModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content p-3">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">H-CAP 智能審核結果</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div id="resultIcon" style="font-size: 3rem;" class="mb-2"></div>
+                <h3 id="resultTitle" class="fw-bold"></h3>
+                <p id="resultDesc" class="text-muted"></p>
+                <div id="resultDetails" class="alert alert-light border d-inline-block text-start px-4"></div>
+                <hr>
+                <div class="text-center">
+                    <p class="text-muted small mb-3"><i class="fas fa-info-circle me-1"></i>已自動建立客戶檔案（每次申請會覆寫前一筆）</p>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="/client/custom?model=card" class="btn btn-dark w-100 py-3" id="linkUserAction">
+                                <i class="fas fa-database fa-2x d-block mb-2"></i>
+                                <strong>進入客戶資料庫</strong>
+                            </a>
+                        </div>
+                        <div class="col-md-6">
+                            <a href="/app_simulator?client_id=custom" target="_blank" class="btn btn-success w-100 py-3">
+                                <i class="fas fa-mobile-alt fa-2x d-block mb-2"></i>
+                                <strong>開啟 APP 數位足跡</strong>
+                            </a>
+                        </div>
+                    </div>
+                    <p class="text-muted small mt-3 mb-0"><i class="fas fa-lightbulb me-1 text-warning"></i>透過 APP 數位足跡持續累積信用行為，可動態提升您的 H-CAP 分數</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ===== 語音驗證狀態管理 =====
+    function markApplyVoiceDone(score) {
+        var btn = document.getElementById('applyVoiceBtn');
+        btn.className = 'btn btn-secondary btn-lg rounded-pill px-5 disabled';
+        btn.style.pointerEvents = 'none';
+        btn.style.opacity = '0.6';
+        btn.innerHTML = '<i class="fas fa-check-circle me-2"></i> 語音驗證已完成';
+        btn.removeAttribute('href');
+        btn.removeAttribute('target');
+        document.getElementById('applyVoiceDone').style.display = 'block';
+        document.getElementById('applyVoiceScoreText').innerText = '（平均 ' + score + ' 分，提交後將納入加分）';
+        localStorage.setItem('voice_done_score', score);
+    }
+    window.addEventListener('message', function(ev) {
+        if (ev.data && ev.data.type === 'voice_verification_done') {
+            markApplyVoiceDone(ev.data.avg_score);
+        }
+    });
+
+    // ===== Auto-fill from VC verified data =====
+    window.addEventListener('DOMContentLoaded', () => {
+        // 恢復語音驗證狀態
+        var savedVoiceScore = localStorage.getItem('voice_done_score');
+        if (savedVoiceScore) { markApplyVoiceDone(savedVoiceScore); }
+        const urlParams = new URLSearchParams(window.location.search);
+        const isJustVerified = urlParams.get('verified') === 'true';
+        const arcVerified = localStorage.getItem('apply_arc_verified') === 'true';
+        const contractVerified = localStorage.getItem('apply_contract_verified') === 'true';
+
+        if (!isJustVerified) {
+            // Fresh page load - reset verification state
+            localStorage.removeItem('apply_arc_verified');
+            localStorage.removeItem('apply_contract_verified');
+            localStorage.removeItem('verified_name_from_vc');
+            return;
+        }
+
+        // Update status badges
+        if (arcVerified) {
+            document.getElementById('applyArcStatus').innerHTML = '<i class="fas fa-check-circle text-success"></i> <span class="text-success fw-bold">已驗證 (Verified)</span>';
+        }
+        if (contractVerified) {
+            document.getElementById('applyContractStatus').innerHTML = '<i class="fas fa-check-circle text-success"></i> <span class="text-success fw-bold">已驗證 (Verified)</span>';
+        }
+
+        if (arcVerified && contractVerified) {
+            // Update VC status banner
+            const banner = document.getElementById('vcStatusBanner');
+            banner.className = 'vc-status-banner verified';
+            banner.style.fontSize = '0.85rem';
+            banner.innerHTML = '<i class="fas fa-check-circle"></i><span>數位憑證驗證已完成！以下欄位已自動帶入。</span>';
+
+            // Auto-fill from verified data
+            const verifiedData = JSON.parse(localStorage.getItem('hcap_verified_data') || '{}');
+            const fieldMap = {
+                'english_name': verifiedData.name,
+                'arc_no': verifiedData.ui_num,
+                'arc_issue_date': verifiedData.issue_date,
+                'arc_expiry': verifiedData.expiry_date,
+                'arc_card_num': verifiedData.card_num,
+                'company_name': verifiedData.company_name,
+                'company_phone': verifiedData.company_telephone,
+                'address': verifiedData.company_address,
+                'job_title': verifiedData.job_title,
+                'base_salary': verifiedData.monthly_wages,
+                'agency_name': verifiedData.agency_name,
+                'agency_phone': verifiedData.agency_telephone,
+                'contract_expiry': verifiedData.contract_expiry
+            };
+
+            for (const [name, value] of Object.entries(fieldMap)) {
+                const el = document.querySelector(`[name="${name}"]`);
+                if (el && value) {
+                    el.value = value;
+                    el.readOnly = true;
+                    el.setAttribute('tabindex', '-1');
+                    el.classList.add('vc-locked-field');
+                }
+            }
+
+            // Lock the verify button
+            const goBtn = document.getElementById('goVerifyBtn');
+            if (goBtn) {
+                goBtn.classList.replace('btn-primary', 'btn-secondary');
+                goBtn.classList.add('disabled');
+                goBtn.innerHTML = '<i class="fas fa-lock me-1"></i>已鎖定';
+                goBtn.removeAttribute('href');
+            }
+        }
+    });
+
+    function toggleApplyVoiceSection() { document.getElementById('applyVoiceSection').style.display = document.getElementById('applyEnableVoiceVerify').checked ? 'block' : 'none'; }
+
+    // Remittance sync
+    new BroadcastChannel('hcap_remit_sync_channel').onmessage = (ev) => {
+        if (ev.data.action === 'sync_score') {
+            const score = ev.data.score;
+            document.getElementById('exactRemittanceScore').value = score;
+            document.getElementById('remittanceSelect').value = score >= 70 ? 'regular' : 'irregular';
+            document.getElementById('remittanceSelect').classList.add('verified-field');
+            document.getElementById('remittanceHidden').value = document.getElementById('remittanceSelect').value;
+            const btn = document.getElementById('checkBankBtn');
+            btn.className = 'btn btn-success disabled'; btn.innerHTML = '<i class="fas fa-check"></i> 已同步';
+            document.getElementById('remittanceHelp').innerHTML = `<span class="text-success fw-bold">同步成功: ${score}%</span>`;
+        }
+    };
+
+    function submitApplication() {
+        if (localStorage.getItem('apply_arc_verified') !== 'true') { alert('請先完成憑證驗證'); return; }
+        const btn = document.querySelector('.btn-submit');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-cog fa-spin me-2"></i> H-CAP 運算中...'; btn.disabled = true;
+
+        const formData = new FormData(document.getElementById('applicationForm'));
+        formData.append('arc_verified', 'true'); formData.append('contract_verified', 'true');
+        formData.set('remittance_habit', document.getElementById('remittanceHidden').value);
+
+        fetch('/api/apply_credit_card', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            const modal = new bootstrap.Modal(document.getElementById('resultModal'));
+            const icon = document.getElementById('resultIcon');
+            const title = document.getElementById('resultTitle');
+            if (data.status === 'approved') {
+                icon.innerHTML = '<i class="fas fa-check-circle text-success"></i>'; title.innerText = '核卡成功'; title.className = 'fw-bold text-success';
+            } else if (data.status === 'review') {
+                icon.innerHTML = '<i class="fas fa-exclamation-triangle text-warning"></i>'; title.innerText = '需進行視訊驗證'; title.className = 'fw-bold text-warning';
+            } else {
+                icon.innerHTML = '<i class="fas fa-times-circle text-danger"></i>'; title.innerText = '未通過'; title.className = 'fw-bold text-danger';
+            }
+            document.getElementById('resultDetails').innerHTML = `<div class="row"><div class="col-7">基礎分:</div><div class="col-5">${data.details.base_score}</div><div class="col-7 fs-5">H-CAP Score:</div><div class="col-5 fs-5 text-primary">${data.score}</div></div>`;
+            localStorage.removeItem('voice_done_score');
+            modal.show(); btn.innerHTML = originalText; btn.disabled = false;
+        });
+    }
+
+    // 生成電子存摺交易明細
+    function generateBankStatement() {
+        const companyName = document.querySelector('[name="company_name"]').value;
+        const baseSalary = document.querySelector('[name="base_salary"]').value;
+        if (!companyName || !baseSalary) {
+            alert('請先完成數位憑證驗證，帶入公司名稱與底薪');
+            return;
+        }
+        const btn = document.getElementById('btnGenerateStatement');
+        btn.innerHTML = '<i class="fas fa-cog fa-spin me-1"></i>生成中...';
+        btn.disabled = true;
+
+        fetch('/api/generate_bank_statement', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ company_name: companyName, base_salary: parseInt(baseSalary) })
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('bankStatementData').value = JSON.stringify(data.transactions);
+            renderStatementTable(data.transactions);
+            document.getElementById('statementPreview').style.display = 'block';
+            btn.innerHTML = '<i class="fas fa-redo me-1"></i>重新生成';
+            btn.disabled = false;
+        })
+        .catch(err => {
+            console.error(err);
+            alert('生成失敗，請稍後再試');
+            btn.innerHTML = '<i class="fas fa-cog me-1"></i>自動生成 6 個月交易明細';
+            btn.disabled = false;
+        });
+    }
+
+    function renderStatementTable(transactions) {
+        let html = '<table class="table table-sm table-bordered table-striped mb-0" style="font-size:0.85rem;">';
+        html += '<thead class="table-dark"><tr><th>日期</th><th>摘要</th><th>提款</th><th>存款</th><th>結餘</th></tr></thead><tbody>';
+        transactions.forEach(t => {
+            const isSalary = t.memo.includes('薪資');
+            const rowClass = isSalary ? 'class="table-success fw-bold"' : '';
+            html += `<tr ${rowClass}><td>${t.date}</td><td>${t.memo}</td><td class="text-danger">${t.withdrawal}</td><td class="text-success">${t.deposit}</td><td>${t.balance}</td></tr>`;
+        });
+        html += '</tbody></table>';
+        document.getElementById('statementTable').innerHTML = html;
+    }
+
+    function toggleStatementTable() {
+        const el = document.getElementById('statementTable');
+        el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    }
+</script>
+</body>
+</html>

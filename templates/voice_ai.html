@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>H-CAP Video Guard | AI面談</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <style>
+        body { background-color: #000; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; overflow: hidden; }
+        .phone-frame { width: 375px; height: 750px; background: linear-gradient(180deg, #16213e 0%, #0f3460 100%); border-radius: 40px; border: 8px solid #222; position: relative; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 0 50px rgba(0, 123, 255, 0.2); }
+        .content-layer { flex: 1; display: flex; flex-direction: column; padding: 20px; position: relative; z-index: 10; }
+        
+        #hiddenVideo { width: 1px; height: 1px; opacity: 0; position: absolute; pointer-events: none; }
+
+        .camera-blind-box {
+            width: 100%; height: 250px; 
+            background: #0a0a0a; 
+            border-radius: 20px; 
+            border: 2px solid #333;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+            box-shadow: inset 0 0 30px #000;
+            overflow: hidden;
+        }
+        
+        #audioVisualizer { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; opacity: 0.6; pointer-events: none; }
+
+        .question-card { 
+            background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; 
+            text-align: center; color: white; min-height: 140px; 
+            display: flex; align-items: center; justify-content: center; 
+            margin-bottom: 20px; backdrop-filter: blur(5px); border: 1px solid rgba(255,255,255,0.1);
+            transition: all 0.3s;
+        }
+        
+        .question-blurred { filter: blur(10px); opacity: 0.3; user-select: none; pointer-events: none; transition: all 0.3s; }
+        .question-revealed { filter: blur(0); opacity: 1; transform: scale(1.02); }
+
+        .btn-record { width: 80px; height: 80px; border-radius: 50%; border: none; font-size: 1.8rem; margin: 0 auto; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.3s; position: relative; }
+        
+        .btn-start { background: linear-gradient(135deg, #2ecc71, #27ae60); color: white; box-shadow: 0 0 20px rgba(46, 204, 113, 0.4); }
+        .btn-start:hover { transform: scale(1.05); }
+        .btn-stop { background: linear-gradient(135deg, #e74c3c, #c0392b); color: white; box-shadow: 0 0 20px rgba(231, 76, 60, 0.4); animation: pulse-record 2s infinite; }
+        .btn-processing { background: #34495e; color: #7f8c8d; cursor: not-allowed; border: 2px solid #7f8c8d; }
+
+        @keyframes pulse-record { 0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(231, 76, 60, 0); } 100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); } }
+
+        .instruction-modal {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.95); z-index: 999; 
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            padding: 30px; text-align: center; color: white;
+        }
+        .instruction-icon { font-size: 3rem; color: #4cc9f0; margin-bottom: 20px; }
+        .instruction-step { margin-bottom: 15px; opacity: 0.9; font-size: 0.9rem; text-align: left; width: 100%; }
+        .instruction-step i { width: 25px; text-align: center; color: #f72585; margin-right: 10px; }
+
+        #resultLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #0f3460; z-index: 50; display: none; flex-direction: column; padding: 30px; }
+        .result-item { background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px; margin-bottom: 8px; border-left: 3px solid #4cc9f0; font-size: 0.9rem; color: #eee; }
+
+        .lang-switch { position: absolute; top: 15px; right: 15px; z-index: 1001; }
+        .lang-select { background: rgba(0,0,0,0.7); color: white; border: 1px solid #777; border-radius: 15px; padding: 4px 12px; font-size: 0.8rem; outline: none; cursor: pointer; }
+        
+        .upload-overlay { position: absolute; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index: 2000; display: none; flex-direction: column; justify-content: center; align-items: center; color: white; }
+
+        .success-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(16, 20, 24, 0.98); 
+            z-index: 3000; 
+            display: none; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center;
+            text-align: center;
+            padding: 30px;
+        }
+        .success-icon { font-size: 4rem; color: #2ecc71; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="lang-switch">
+            <select class="lang-select" id="langSelect" onchange="setLanguage(this.value)">
+                <option value="zh-TW">中文</option>
+                <option value="en-US">English</option>
+                <option value="vi-VN">Tiếng Việt</option>
+                <option value="id-ID">Indonesia</option>
+                <option value="th-TH">ภาษาไทย</option>
+            </select>
+        </div>
+
+        <div class="p-3 text-white d-flex justify-content-between align-items-center bg-dark bg-opacity-50">
+            <small class="fw-bold"><i class="fas fa-shield-alt text-primary me-1"></i>H-CAP Guard</small>
+            <small class="text-success" id="privacyText">● Privacy On</small>
+        </div>
+
+        <div class="instruction-modal" id="instructionLayer">
+            <div class="instruction-icon"><i class="fas fa-user-check"></i></div>
+            <h4 class="fw-bold mb-4" id="instTitle">面談操作說明</h4>
+            
+            <div class="instruction-step">
+                <i class="fas fa-play"></i> <span id="inst1">1. 按下綠色按鈕，題目將會顯示。</span>
+            </div>
+            <div class="instruction-step">
+                <i class="fas fa-microphone"></i> <span id="inst2">2. 請清楚朗讀或回答題目。</span>
+            </div>
+            <div class="instruction-step">
+                <i class="fas fa-stop"></i> <span id="inst3">3. 講完後按下紅色按鈕結束。</span>
+            </div>
+            
+            <div class="instruction-step text-info small border-top pt-3 mt-2">
+                <i class="fas fa-lightbulb"></i> <span id="instTip">建議：回答字數約 10-50 字。內容需具體且邏輯清晰。</span>
+            </div>
+
+            <div class="instruction-step text-warning small mt-1">
+                <i class="fas fa-exclamation-triangle"></i> <span id="instWarn">注意：系統將全程進行背景側錄，請勿在題與題之間查閱資料。</span>
+            </div>
+
+            <button id="btnStartIntro" class="btn btn-secondary w-100 rounded-pill mt-4 fw-bold py-2" onclick="startInterview()" disabled>
+                <span id="btnUnderstand"><i class="fas fa-spinner fa-spin me-2"></i> 系統準備中...</span>
+            </button>
+        </div>
+
+        <div class="content-layer" id="mainLayer">
+            <video id="hiddenVideo" autoplay playsinline muted></video>
+
+            <div class="camera-blind-box">
+                <canvas id="audioVisualizer"></canvas>
+                <div id="idleIcon" class="text-center">
+                    <i class="fas fa-video-slash fa-3x text-secondary mb-3"></i>
+                    <div class="text-white-50 small" id="blindBoxText">隱私保護模式<br>(僅後台AI可見)</div>
+                </div>
+            </div>
+
+            <div class="question-card">
+                <div id="questionText" class="question-blurred fw-bold fs-5">系統連接中...</div>
+            </div>
+
+            <div class="text-center mt-auto mb-4">
+                <p id="statusText" class="text-white-50 small mb-3">請按開始鍵顯示題目</p>
+                <button id="actionBtn" class="btn-record btn-start" onclick="handleAction()">
+                    <i class="fas fa-play"></i>
+                </button>
+                <div class="mt-2 text-white small opacity-75" id="btnLabel">開始作答</div>
+            </div>
+        </div>
+
+        <div id="resultLayer">
+            <h3 class="text-white text-center mb-4"><i class="fas fa-clipboard-check me-2"></i>AI Report</h3>
+            <div id="resultList" style="flex:1; overflow-y:auto;"></div>
+            
+            <button id="finalSubmitBtn" class="btn btn-success w-100 mt-3 rounded-pill py-3 fw-bold" onclick="finishSession()">
+                <i class="fas fa-check me-2"></i> <span id="btnFinish">完成並上傳</span>
+            </button>
+        </div>
+        
+        <div class="upload-overlay" id="uploadOverlay">
+            <div class="spinner-border text-light mb-3" role="status"></div>
+            <div id="uploadStatusText">正在加密上傳全程錄影...</div>
+            <div class="small text-white-50 mt-1">請勿關閉視窗</div>
+        </div>
+
+        <div class="success-overlay" id="successOverlay">
+            <div class="success-icon"><i class="fas fa-check-circle animate__animated animate__bounceIn"></i></div>
+            <h3 class="text-white fw-bold mb-2">語音驗證完成！</h3>
+            <p class="text-white-50 mb-4">驗證結果已記錄，將在提交申請時納入 H-CAP 評分加分。</p>
+
+            <div class="w-100">
+                <div class="d-grid gap-3">
+                    <button onclick="window.close()" class="btn btn-success py-3 rounded-pill fw-bold">
+                        <i class="fas fa-arrow-left me-2"></i> 返回申請頁面，繼續填寫
+                    </button>
+                </div>
+                <p class="text-white-50 small text-center mt-3"><i class="fas fa-info-circle me-1"></i>如視窗未關閉，請手動切回申請頁面</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const i18n = {
+            "zh-TW": { privacy: "● 隱私保護中", instTitle: "面談操作說明", inst1: "1. 按下綠色按鈕，題目將會顯示。", inst2: "2. 請清楚朗讀或回答題目。", inst3: "3. 講完後按下紅色按鈕結束。", instTip: "建議：回答字數約 10-50 字。內容需具體且邏輯清晰。", instWarn: "注意：系統將全程進行背景側錄，請勿在題與題之間查閱資料。", btnUnderstand: "我了解，開始面談", blindBox: "隱私保護模式\n(僅後台AI可見)", statusReady: "請按開始鍵顯示題目", statusRec: "正在錄影... 請回答上方題目", statusProc: "AI 正在分析語意與特徵...", btnStart: "開始作答", btnStop: "結束作答", btnProc: "分析中", btnFinish: "完成並上傳" },
+            "en-US": { privacy: "● Privacy On", instTitle: "Instructions", inst1: "1. Press GREEN button to reveal question.", inst2: "2. Read aloud or answer clearly.", inst3: "3. Press RED button when finished.", instTip: "Tip: Keep answers between 10-50 words. Be specific and logical.", instWarn: "Note: Full session is recorded in background. Do not look up answers.", btnUnderstand: "I Understand, Start", blindBox: "Privacy Mode\n(AI Analysis Only)", statusReady: "Press Start to reveal question", statusRec: "Recording... Please answer above", statusProc: "AI Analyzing semantics...", btnStart: "Start Answer", btnStop: "Stop Answer", btnProc: "Analyzing", btnFinish: "Finish & Upload" },
+            "vi-VN": { privacy: "● Bảo mật Bật", instTitle: "Hướng dẫn", inst1: "1. Nhấn nút XANH để hiện câu hỏi.", inst2: "2. Đọc to hoặc trả lời rõ ràng.", inst3: "3. Nhấn nút ĐỎ khi hoàn tất.", instTip: "Mẹo: Trả lời từ 10-50 từ. Hãy cụ thể và logic.", instWarn: "Lưu ý: Toàn bộ phiên được ghi lại. Không tra cứu tài liệu.", btnUnderstand: "Tôi hiểu, Bắt đầu", blindBox: "Chế độ riêng tư\n(Chỉ AI mới thấy)", statusReady: "Nhấn Bắt đầu để hiện câu hỏi", statusRec: "Đang ghi âm... Vui lòng trả lời", statusProc: "AI đang phân tích...", btnStart: "Bắt đầu", btnStop: "Dừng lại", btnProc: "Đang xử lý", btnFinish: "Hoàn tất & Tải lên" },
+            "id-ID": { privacy: "● Privasi Aktif", instTitle: "Instruksi", inst1: "1. Tekan tombol HIJAU untuk soal.", inst2: "2. Baca atau jawab dengan jelas.", inst3: "3. Tekan tombol MERAH jika selesai.", instTip: "Tips: Jawab 10-50 kata. Harus spesifik dan logis.", instWarn: "Catatan: Sesi direkam penuh di latar belakang. Jangan mencontek.", btnUnderstand: "Saya Paham, Mulai", blindBox: "Mode Privasi\n(Hanya AI)", statusReady: "Tekan Mulai untuk lihat soal", statusRec: "Merekam... Silakan jawab", statusProc: "AI sedang menganalisis...", btnStart: "Mulai Jawab", btnStop: "Selesai Jawab", btnProc: "Memproses", btnFinish: "Selesai & Unggah" },
+            "th-TH": { privacy: "● เปิดการคุ้มครองความเป็นส่วนตัว", instTitle: "คำแนะนำการสัมภาษณ์", inst1: "1. กดปุ่มสีเขียวเพื่อแสดงคำถาม", inst2: "2. โปรดอ่านออกเสียงหรือตอบคำถามให้ชัดเจน", inst3: "3. เมื่อพูดจบให้กดปุ่มสีแดงเพื่อสิ้นสุด", instTip: "คำแนะนำ: ควรตอบประมาณ 10-50 คำ เนื้อหาต้องชัดเจนและมีตรรกะ", instWarn: "หมายเหตุ: ระบบจะบันทึกวิดีโอเบื้องหลังตลอดกระบวนการ โปรดอย่าค้นหาข้อมูลระหว่างข้อ", btnUnderstand: "ฉันเข้าใจแล้ว เริ่มการสัมภาษณ์", blindBox: "โหมดความเป็นส่วนตัว\n(เฉพาะ AI ที่มองเห็น)", statusReady: "โปรดกดปุ่มเริ่มเพื่อแสดงคำถาม", statusRec: "กำลังบันทึก... โปรดตอบคำถามด้านบน", statusProc: "AI กำลังวิเคราะห์ความหมายและลักษณะ...", btnStart: "เริ่มตอบ", btnStop: "สิ้นสุดการตอบ", btnProc: "กำลังวิเคราะห์", btnFinish: "เสร็จสิ้นและอัปโหลด" }
+        };
+        
+        const questions = [
+            "請朗讀：我保證資料真實，絕無虛假。",
+            "第一題：請問您在台灣從事什麼工作？",
+            "第二題：這筆貸款的主要用途是什麼？",
+            "第三題：您目前在工廠的加班頻率高嗎？",
+            "第四題：如果沒有加班費，您如何還款？"
+        ];
+        
+        const voiceClientId = '{{ client_id | default("custom") }}';
+        let currentStep = 0;
+        let globalRecorder;
+        let clipRecorder;
+        let clipChunks = [];
+        let globalChunks = [];
+        let finalResults = [];
+        let audioContext, analyser, dataArray, canvas, canvasCtx;
+        let appState = 'READY';
+        let currentLang = 'zh-TW';
+
+        function setLanguage(lang) {
+            currentLang = lang;
+            const t = i18n[lang];
+            
+            document.getElementById('privacyText').innerText = t.privacy;
+            document.getElementById('instTitle').innerText = t.instTitle;
+            document.getElementById('inst1').innerText = t.inst1;
+            document.getElementById('inst2').innerText = t.inst2;
+            document.getElementById('inst3').innerText = t.inst3;
+            document.getElementById('instTip').innerText = t.instTip;
+            document.getElementById('instWarn').innerText = t.instWarn;
+            
+            // 只有當按鈕啟用時才更新文字，避免覆蓋 "系統準備中..."
+            const btn = document.getElementById('btnStartIntro');
+            if (!btn.disabled) {
+                document.getElementById('btnUnderstand').innerText = t.btnUnderstand;
+            }
+            
+            document.getElementById('blindBoxText').innerText = t.blindBox;
+            document.getElementById('btnFinish').innerText = t.btnFinish;
+            
+            if(appState === 'READY') {
+                document.getElementById('statusText').innerText = t.statusReady;
+                document.getElementById('btnLabel').innerText = t.btnStart;
+            }
+        }
+
+        async function init() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: "user" } });
+                document.getElementById('hiddenVideo').srcObject = stream;
+                
+                setupVisualizer(stream);
+
+                globalRecorder = new MediaRecorder(stream); 
+                globalRecorder.ondataavailable = e => { if (e.data.size > 0) globalChunks.push(e.data); };
+                
+                clipRecorder = new MediaRecorder(stream);
+                clipRecorder.ondataavailable = e => clipChunks.push(e.data);
+                clipRecorder.onstop = uploadAndAnalyze;
+
+                // [關鍵修復] 權限取得成功後，啟用按鈕並更改文字
+                const btn = document.getElementById('btnStartIntro');
+                btn.disabled = false;
+                btn.className = "btn btn-primary w-100 rounded-pill mt-4 fw-bold py-2";
+                document.getElementById('btnUnderstand').innerText = i18n[currentLang].btnUnderstand;
+
+            } catch(e) {
+                alert("請允許相機與麥克風權限，否則無法進行面試");
+                document.getElementById('btnUnderstand').innerText = "權限被拒絕 (請重整網頁)";
+            }
+        }
+
+        function startInterview() {
+            document.getElementById('instructionLayer').style.display = 'none';
+            // [關鍵修復] 先設定 UI，確保題目文字出現
+            setupQuestionUI();
+            // 再啟動錄影 (如果有問題至少文字還在)
+            if (globalRecorder && globalRecorder.state === 'inactive') {
+                globalRecorder.start(1000); 
+            }
+        }
+
+        function setupQuestionUI() {
+            const qText = document.getElementById('questionText');
+            const btn = document.getElementById('actionBtn');
+            const t = i18n[currentLang];
+
+            qText.innerText = questions[currentStep];
+            qText.className = "question-blurred fw-bold fs-5";
+
+            btn.className = "btn-record btn-start";
+            btn.innerHTML = '<i class="fas fa-play"></i>';
+            btn.disabled = false;
+            
+            document.getElementById('btnLabel').innerText = t.btnStart;
+            document.getElementById('statusText').innerText = t.statusReady;
+            document.getElementById('statusText').className = "text-white-50 small mb-3";
+            
+            document.getElementById('idleIcon').style.opacity = 1;
+            appState = 'READY';
+        }
+
+        function handleAction() {
+            if (appState === 'READY') startClip();
+            else if (appState === 'RECORDING') stopClip();
+        }
+
+        function startClip() {
+            appState = 'RECORDING';
+            clipChunks = [];
+            clipRecorder.start();
+
+            const t = i18n[currentLang];
+            const qText = document.getElementById('questionText');
+            qText.className = "question-revealed fw-bold fs-5 animate__animated animate__fadeIn"; 
+
+            const btn = document.getElementById('actionBtn');
+            btn.className = "btn-record btn-stop";
+            btn.innerHTML = '<i class="fas fa-stop"></i>';
+            document.getElementById('btnLabel').innerText = t.btnStop;
+
+            document.getElementById('statusText').innerText = t.statusRec;
+            document.getElementById('statusText').className = "text-danger small mb-3 fw-bold";
+            
+            document.getElementById('idleIcon').style.opacity = 0; 
+        }
+
+        function stopClip() {
+            appState = 'PROCESSING';
+            clipRecorder.stop();
+
+            const t = i18n[currentLang];
+            const btn = document.getElementById('actionBtn');
+            btn.className = "btn-record btn-processing";
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            btn.disabled = true;
+            document.getElementById('btnLabel').innerText = t.btnProc;
+
+            document.getElementById('statusText').innerText = t.statusProc;
+            document.getElementById('statusText').className = "text-info small mb-3";
+            
+            document.getElementById('questionText').className = "question-blurred fw-bold fs-5";
+        }
+
+        async function uploadAndAnalyze() {
+            const blob = new Blob(clipChunks, { type: 'video/webm' });
+            const formData = new FormData();
+            formData.append('video_file', blob, `interview_q${currentStep}.webm`);
+            formData.append('question_index', currentStep);
+            formData.append('client_id', voiceClientId);
+
+            try {
+                const res = await fetch('/api/analyze_video_step', { method: 'POST', body: formData });
+                const data = await res.json();
+                finalResults.push(data);
+
+                document.getElementById('statusText').innerText = "OK! Next...";
+                document.getElementById('statusText').className = "text-success small mb-3 fw-bold";
+
+                setTimeout(() => {
+                    currentStep++;
+                    if (currentStep < questions.length) {
+                        setupQuestionUI();
+                    } else {
+                        finishAllAndUpload();
+                    }
+                }, 1000);
+
+            } catch(e) {
+                console.error(e);
+                alert("Upload Failed. Retrying...");
+                setupQuestionUI();
+            }
+        }
+
+        function finishAllAndUpload() {
+            if (globalRecorder && globalRecorder.state !== 'inactive') {
+                globalRecorder.stop();
+            }
+            document.getElementById('uploadOverlay').style.display = 'flex';
+
+            setTimeout(async () => {
+                const fullBlob = new Blob(globalChunks, { type: 'video/webm' });
+                const formData = new FormData();
+                formData.append('video_file', fullBlob, `full_session.webm`);
+                formData.append('client_id', voiceClientId);
+
+                try {
+                    await fetch('/api/upload_full_session', { method: 'POST', body: formData });
+                    document.getElementById('uploadOverlay').style.display = 'none';
+                    showFinalResult();
+                } catch(e) {
+                    console.error("Full upload failed", e);
+                    alert("監控影片上傳失敗，但分析結果已保存。");
+                    document.getElementById('uploadOverlay').style.display = 'none';
+                    showFinalResult();
+                }
+            }, 800);
+        }
+
+        function showFinalResult() {
+            document.getElementById('mainLayer').style.display = 'none';
+            document.getElementById('resultLayer').style.display = 'flex';
+
+            let html = '';
+            finalResults.forEach((r, idx) => {
+                let badgeClass = r.score >= 80 ? 'bg-success' : (r.score >= 60 ? 'bg-warning text-dark' : 'bg-danger');
+                html += `
+                    <div class="result-item animate__animated animate__fadeInUp" style="animation-delay: ${idx*0.1}s">
+                        <div class="d-flex justify-content-between mb-1">
+                            <strong>Q${idx+1}</strong>
+                            <span class="badge ${badgeClass}">${r.score}分</span>
+                        </div>
+                        <div class="text-white-50 small">"${r.text}"</div>
+                        <div class="text-end text-info small mt-1">${r.reason}</div>
+                    </div>
+                `;
+            });
+            document.getElementById('resultList').innerHTML = html;
+        }
+
+        function finishSession() {
+            const btn = document.getElementById('finalSubmitBtn');
+
+            btn.disabled = true;
+            document.getElementById('btnFinish').innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i> 正在上傳驗證結果...';
+
+            fetch('/api/finalize_voice_verification', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ client_id: voiceClientId })
+            })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('resultLayer').style.display = 'none';
+                    document.getElementById('successOverlay').style.display = 'flex';
+                    // 通知申請頁面已完成語音驗證
+                    if (window.opener && !window.opener.closed) {
+                        window.opener.postMessage({ type: 'voice_verification_done', avg_score: data.avg_score }, '*');
+                    }
+                } else {
+                    alert(data.message || "上傳失敗，請重試。");
+                    btn.disabled = false;
+                    document.getElementById('btnFinish').innerText = "重試 (Retry)";
+                }
+            })
+            .catch(e => {
+                console.error(e);
+                alert("系統連線錯誤");
+                btn.disabled = false;
+                document.getElementById('btnFinish').innerHTML = '<i class="fas fa-check me-2"></i> 完成並上傳';
+            });
+        }
+
+        function setupVisualizer(stream) {
+            audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const source = audioContext.createMediaStreamSource(stream);
+            analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            source.connect(analyser);
+
+            dataArray = new Uint8Array(analyser.frequencyBinCount);
+            canvas = document.getElementById("audioVisualizer");
+            canvasCtx = canvas.getContext("2d");
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            drawVisualizer();
+        }
+
+        function drawVisualizer() {
+            requestAnimationFrame(drawVisualizer);
+            if (appState !== 'RECORDING') {
+                canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+            analyser.getByteFrequencyData(dataArray);
+            canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+            const barWidth = (canvas.width / dataArray.length) * 2.5;
+            let barHeight;
+            let x = 0;
+            for(let i = 0; i < dataArray.length; i++) {
+                barHeight = dataArray[i] / 1.5;
+                const r = barHeight + (25 * (i/dataArray.length));
+                const g = 250 * (i/dataArray.length);
+                const b = 50;
+                canvasCtx.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+                canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth + 1;
+            }
+        }
+
+        init();
+    </script>
+</body>
+</html>

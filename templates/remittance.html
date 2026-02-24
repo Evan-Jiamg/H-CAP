@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EasyRemit Partner</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background-color: #f0f2f5; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; height: 100vh; display: flex; justify-content: center; align-items: center; }
+        .phone-frame { width: 375px; height: 812px; background: #fff; border-radius: 40px; border: 10px solid #333; position: relative; overflow: hidden; display: flex; flex-direction: column; }
+        .notch { position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 150px; height: 30px; background: #333; border-bottom-left-radius: 20px; border-bottom-right-radius: 20px; z-index: 100; }
+        
+        .app-header { background: linear-gradient(135deg, #00b894, #00cec9); color: white; padding: 50px 20px 20px; box-shadow: 0 4px 15px rgba(0, 184, 148, 0.3); transition: all 0.5s; }
+        .lang-select { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); color: white; font-size: 0.8rem; padding: 2px 8px; border-radius: 12px; outline: none; cursor: pointer; }
+        .lang-select option { color: #333; }
+
+        .emergency-badge { display: none; background: #fff; color: #d63031; font-size: 0.75rem; font-weight: bold; padding: 5px 15px; border-radius: 20px; margin-top: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
+        .trans-list { flex: 1; overflow-y: auto; padding: 0; background: #f8f9fa; }
+        .trans-item { display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; border-bottom: 1px solid #eee; background: white; transition: 0.2s; }
+        .trans-item:active { background-color: #f1f1f1; }
+        .trans-date { font-size: 0.75rem; color: #aaa; margin-top: 2px; }
+        .trans-amount { font-weight: bold; color: #2d3436; font-size: 1.1rem; }
+        .trans-item.highlight { background-color: #ffe6e6; border-left: 4px solid #ff7675; }
+        
+        .connect-box { background: #fff; padding: 20px; border-top: 1px solid #eee; text-align: center; box-shadow: 0 -5px 20px rgba(0,0,0,0.05); z-index: 10; position: relative; }
+        .btn-connect { background: #0984e3; color: white; border-radius: 30px; padding: 12px 30px; width: 100%; border: none; font-weight: bold; box-shadow: 0 5px 15px rgba(9, 132, 227, 0.3); transition: all 0.3s; }
+        .btn-connect:active { transform: scale(0.98); }
+        .btn-connect:disabled { background: #b2bec3; box-shadow: none; cursor: not-allowed; }
+
+        .btn-algo-info { position: absolute; top: -15px; right: 20px; background: #6c5ce7; color: white; width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 3px 10px rgba(108, 92, 231, 0.4); cursor: pointer; border: none; }
+
+        .modal-body { font-size: 0.9rem; line-height: 1.6; text-align: left; }
+        .algo-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px dashed #eee; }
+        .algo-item:last-child { border-bottom: none; }
+        .algo-title { font-weight: bold; color: #2d3436; display: flex; align-items: center; }
+        .algo-badge { background: #e3f2fd; color: #0984e3; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; margin-left: auto; }
+    </style>
+</head>
+<body>
+    <div class="phone-frame">
+        <div class="notch"></div>
+        
+        <div class="app-header">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0 fw-bold"><i class="fas fa-paper-plane me-2"></i>EasyRemit</h5>
+                <select class="lang-select" id="langSelect" onchange="changeLanguage()">
+                    <option value="zh-TW">中文</option>
+                    <option value="en-US">English</option>
+                    <option value="vi-VN">Tiếng Việt</option>
+                    <option value="id-ID">Indonesia</option>
+                </select>
+            </div>
+            <div class="mt-2">
+                <small class="text-white-50" id="lblTotal">Total Remitted (Year)</small>
+                <h2 class="fw-bold mb-0">NT$ <span id="totalDisplay">--</span></h2>
+                
+                <div id="emergencyBadge" class="emergency-badge">
+                    <i class="fas fa-bolt me-1"></i> <span id="lblEmergency">High Capacity / Emergency</span>
+                </div>
+
+                <span class="badge bg-white text-success bg-opacity-25 mt-2" id="txCountBadge">0 Transactions</span>
+            </div>
+        </div>
+
+        <div class="bg-light p-2 text-muted small fw-bold ps-3 border-bottom" id="lblRecent">RECENT ACTIVITY</div>
+        
+        <div class="trans-list" id="transactionList">
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-spinner fa-spin"></i> Loading...
+            </div>
+        </div>
+
+        <div class="connect-box">
+            <button class="btn-algo-info" data-bs-toggle="modal" data-bs-target="#algoModal">
+                <i class="fas fa-info"></i>
+            </button>
+
+            <div class="mb-3">
+                <div class="badge bg-success bg-opacity-10 text-success mb-2 px-3 py-2 rounded-pill">
+                    <i class="fas fa-shield-alt me-1"></i> <span id="lblEngine">H-CAP Risk Engine Ready</span>
+                </div>
+                <p class="text-muted small mb-0" id="lblDesc">Sync your remittance behavior to calculate Alternative Credit Score.</p>
+            </div>
+            
+            <button class="btn-connect" id="btnSync" onclick="syncToApply()">
+                <i class="fas fa-sync me-2"></i> <span id="btnSyncText">Analyze & Sync</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="modal fade" id="algoModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 20px;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalTitle">H-CAP Scoring Logic</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="text-muted small mb-3" id="modalDesc">
+                        How we calculate your credit score without payslips.
+                    </div>
+                    <div class="algo-item">
+                        <div class="algo-title">
+                            <i class="fas fa-chart-line text-primary me-2"></i>
+                            <span id="algo1_title">Stability (CV)</span>
+                            <span class="algo-badge">40%</span>
+                        </div>
+                        <div class="text-secondary small mt-1" id="algo1_desc">
+                            Measures the consistency of remittance amounts.
+                        </div>
+                    </div>
+                    <div class="algo-item">
+                        <div class="algo-title">
+                            <i class="fas fa-clock text-warning me-2"></i>
+                            <span id="algo2_title">Regularity (IAT)</span>
+                            <span class="algo-badge">40%</span>
+                        </div>
+                        <div class="text-secondary small mt-1" id="algo2_desc">
+                            Calculates the standard deviation of time intervals.
+                        </div>
+                    </div>
+                    <div class="algo-item">
+                        <div class="algo-title">
+                            <i class="fas fa-random text-info me-2"></i>
+                            <span id="algo3_title">Predictability (Entropy)</span>
+                            <span class="algo-badge">20%</span>
+                        </div>
+                        <div class="text-secondary small mt-1" id="algo3_desc">
+                            Uses Shannon Entropy to quantify predictability.
+                        </div>
+                    </div>
+                    <div class="alert alert-light border small mb-0">
+                        <i class="fas fa-flask me-1"></i> 
+                        <span id="algoFooter">Local Calculation (Edge Computing).</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const i18n = {
+            "zh-TW": {
+                lblTotal: "年度總匯款額", lblRecent: "近期交易紀錄", lblEngine: "H-CAP 風控引擎就緒", lblDesc: "同步您的匯款行為以計算替代信用評分。", btnSyncText: "分析並同步", toMom: "給: 媽媽 (印尼)", completed: "匯款成功", lblEmergency: "已偵測：急用 / 高還款能力",
+                modalTitle: "H-CAP 評分邏輯", modalDesc: "我們如何不看薪資單也能計算您的信用分數。", algo1_title: "金額穩定性 (CV)", algo1_desc: "衡量匯款金額的一致性。", algo2_title: "時間規律性 (IAT)", algo2_desc: "計算每次匯款間隔天數的標準差。", algo3_title: "行為可預測性 (Entropy)", algo3_desc: "使用夏農熵量化行為模式。", algoFooter: "隱私保護：本機運算。"
+            },
+            "en-US": {
+                lblTotal: "Total Remitted (Year)", lblRecent: "RECENT ACTIVITY", lblEngine: "H-CAP Risk Engine Ready", lblDesc: "Sync your remittance behavior to calculate Alternative Credit Score.", btnSyncText: "Analyze & Sync", toMom: "To: Mom (Indonesia)", completed: "Completed", lblEmergency: "High Capacity / Emergency Detected",
+                modalTitle: "H-CAP Scoring Logic", modalDesc: "How we calculate your credit score without payslips.", algo1_title: "Stability (CV)", algo1_desc: "Measures amount consistency.", algo2_title: "Regularity (IAT)", algo2_desc: "Standard deviation of time intervals.", algo3_title: "Predictability (Entropy)", algo3_desc: "Uses Shannon Entropy.", algoFooter: "Privacy: Edge Computing."
+            }
+        };
+
+        let currentLang = "zh-TW";
+        let transactions = [];
+
+        function changeLanguage() {
+            currentLang = document.getElementById('langSelect').value;
+            const t = i18n[currentLang] || i18n["en-US"];
+            document.getElementById('lblTotal').innerText = t.lblTotal;
+            document.getElementById('lblRecent').innerText = t.lblRecent;
+            document.getElementById('lblEngine').innerText = t.lblEngine;
+            document.getElementById('lblDesc').innerText = t.lblDesc;
+            document.getElementById('btnSyncText').innerText = t.btnSyncText;
+            document.getElementById('lblEmergency').innerText = t.lblEmergency;
+            document.getElementById('modalTitle').innerText = t.modalTitle;
+            document.getElementById('modalDesc').innerText = t.modalDesc;
+            document.getElementById('algo1_title').innerText = t.algo1_title;
+            document.getElementById('algo1_desc').innerText = t.algo1_desc;
+            document.getElementById('algo2_title').innerText = t.algo2_title;
+            document.getElementById('algo2_desc').innerText = t.algo2_desc;
+            document.getElementById('algo3_title').innerText = t.algo3_title;
+            document.getElementById('algo3_desc').innerText = t.algo3_desc;
+            document.getElementById('algoFooter').innerText = t.algoFooter;
+            renderList();
+        }
+
+        window.onload = function() {
+            generateRandomData();
+            renderList();
+            checkEmergencyStatus();
+        };
+
+        function generateRandomData() {
+            transactions = [];
+            const count = Math.floor(Math.random() * 8) + 5;
+            let currentDate = new Date();
+            let totalAmount = 0;
+            const simulateEmergency = Math.random() > 0.5;
+
+            for (let i = 0; i < count; i++) {
+                const baseAmount = 10000;
+                let variance = Math.floor(Math.random() * 6000) - 3000;
+                let amount = baseAmount + variance;
+                if (simulateEmergency && i === 0) amount = 55000; 
+
+                const isRegular = Math.random() > 0.3;
+                const dayGap = isRegular ? (30 + Math.floor(Math.random() * 6) - 3) : (Math.floor(Math.random() * 50) + 5);
+                currentDate.setDate(currentDate.getDate() - dayGap);
+                
+                transactions.push({ date: new Date(currentDate), amount: amount });
+                totalAmount += amount;
+            }
+            document.getElementById('totalDisplay').innerText = totalAmount.toLocaleString();
+            document.getElementById('txCountBadge').innerText = `${count} TXs`;
+        }
+
+        function renderList() {
+            const list = document.getElementById('transactionList');
+            const t = i18n[currentLang] || i18n["en-US"];
+            list.innerHTML = '';
+            const avg = transactions.reduce((sum, t) => sum + t.amount, 0) / transactions.length;
+
+            transactions.forEach((tx) => {
+                const dateStr = tx.date.toISOString().split('T')[0];
+                const highlightClass = (tx.amount > avg * 1.5) ? 'highlight' : '';
+                list.innerHTML += `
+                    <div class="trans-item ${highlightClass}">
+                        <div><div class="fw-bold">${t.toMom}</div><div class="trans-date"><i class="far fa-clock me-1"></i>${dateStr}</div></div>
+                        <div class="text-end"><div class="trans-amount text-danger">- NT$ ${tx.amount.toLocaleString()}</div><small class="text-success"><i class="fas fa-check-circle"></i> ${t.completed}</small></div>
+                    </div>`;
+            });
+        }
+
+        function calculateMetrics(data) {
+            const amounts = data.map(d => d.amount);
+            const dates = data.map(d => d.date.getTime());
+            const intervals = [];
+            for (let i = 0; i < dates.length - 1; i++) {
+                intervals.push(Math.ceil(Math.abs(dates[i] - dates[i+1]) / (86400000)));
+            }
+            const mean = arr => arr.reduce((a, b) => a + b, 0) / arr.length;
+            const stdDev = (arr, mu) => Math.sqrt(arr.reduce((sq, n) => sq + Math.pow(n - mu, 2), 0) / (arr.length - 1));
+            const mu_amt = mean(amounts), sigma_amt = stdDev(amounts, mu_amt);
+            const mu_iat = mean(intervals), sigma_iat = stdDev(intervals, mu_iat);
+            const latest = amounts[0];
+            const z_score = (latest - mu_amt) / (sigma_amt || 1);
+            return { cv_amt: sigma_amt/mu_amt, cv_iat: sigma_iat/mu_iat, z_score, mu_amt };
+        }
+
+        function checkEmergencyStatus() {
+            const metrics = calculateMetrics(transactions);
+            const badge = document.getElementById('emergencyBadge');
+            badge.style.display = (transactions[0].amount > metrics.mu_amt * 1.5) ? 'inline-block' : 'none';
+        }
+
+        // [核心修正] 分析 -> 上傳資料庫 -> 同步回 Apply -> 關閉
+        // [核心修正] 改用廣播頻道 (BroadcastChannel) 進行同步
+        function syncToApply() {
+            const btn = document.getElementById('btnSync');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+
+            const metrics = calculateMetrics(transactions);
+            const latestAmount = transactions[0].amount;
+            let score = 100;
+
+            if (latestAmount > metrics.mu_amt * 1.5) {
+                score -= (metrics.cv_amt * 10);
+                score -= (metrics.cv_iat * 40);
+            } else {
+                score -= (metrics.cv_amt * 50);
+                score -= (metrics.cv_iat * 80);
+                if (Math.abs(metrics.z_score) > 2.5) score -= 20;
+            }
+            score = Math.max(40, Math.min(99, Math.round(score)));
+
+            // 1. 上傳至銀行資料庫
+            fetch('/api/upload_remittance', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ 
+                    regularity_rate: score,
+                    avg_amount: parseInt(document.getElementById('totalDisplay').innerText.replace(/,/g, '')) / transactions.length,
+                    metrics: metrics
+                })
+            })
+            .then(r => r.json())
+            .then(data => {
+                console.log("Bank DB Updated:", data);
+                btn.className = 'btn-connect bg-success';
+                btn.innerHTML = `<i class="fas fa-check-circle"></i> Synced!`;
+
+                // 2. [修改] 使用 BroadcastChannel 發送分數
+                const syncChannel = new BroadcastChannel('hcap_remit_sync_channel');
+                syncChannel.postMessage({ 
+                    action: 'sync_score', 
+                    score: score 
+                });
+
+                // 3. 嘗試關閉視窗 (如果瀏覽器阻擋，則顯示提示)
+                setTimeout(() => {
+                    window.close();
+                    // 如果視窗沒關閉（例如被瀏覽器擋住），給個提示
+                    if (!window.closed) {
+                        alert(`同步成功！分數 (${score}) 已傳回申請頁面。\n您可以手動關閉此分頁。`);
+                    }
+                }, 500);
+            })
+            .catch(err => {
+                console.error(err);
+                alert("上傳失敗，請檢查伺服器連線。");
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync me-2"></i> Retry';
+            });
+        }
+    </script>
+</body>
+</html>

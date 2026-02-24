@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>壓力測試 - H-CAP 風險韌性分析</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <style>
+        /* 返回按鈕組樣式 */
+        .back-buttons-group {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+        }
+        .back-button {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 8px;
+            padding: 10px 20px;
+            text-decoration: none;
+            color: #495057;
+            font-weight: 600;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+        }
+        .back-button:hover {
+            background: #f8f9fa;
+            color: #212529;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+
+    <style>
+        /* 復刻舊版簡潔樣式 */
+        input[type=range]::-webkit-slider-runnable-track { background: #adb5bd; height: 8px; border-radius: 4px; border: 1px solid #dee2e6; }
+        .input-group-text { min-width: 65px; justify-content: center; font-weight: bold; background-color: #e9ecef; color: #212529; }
+        .chart-container { position: relative; background-color: #fff; border-radius: 8px; padding: 10px; }
+        .formula-box { background-color: #f8f9fa; border-left: 4px solid #0d6efd; padding: 15px; margin-bottom: 15px; border-radius: 4px; }
+        
+        /* 手動調整面板樣式 */
+        #manualInputPanel {
+            background-color: #f0f8ff;
+            border: 2px dashed #0d6efd;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 15px;
+            display: none; /* 預設隱藏 */
+        }
+        .manual-section-label {
+            font-size: 0.8rem;
+            color: #666;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #dee2e6;
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 返回按鈕組 -->
+    <div class="back-buttons-group">
+        <a href="/portal/bank" class="back-button">
+            <i class="fas fa-arrow-left me-2"></i>返回銀行端管理平台
+        </a>
+        <a href="/" class="back-button">
+            <i class="fas fa-home me-2"></i>首頁
+        </a>
+    </div>
+
+    <div class="container py-4" style="padding-top: 80px;">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-5 fw-bold text-gradient">
+                    <i class="fas fa-bolt me-3"></i>壓力測試系統
+                </h1>
+                <p class="lead text-muted">
+                    模擬極端經濟情境下 H-CAP 評分系統的韌性與穩定性
+                </p>
+                
+                <div id="dataStatusAlert" class="alert alert-secondary alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>系統就緒：</strong>請選擇測試對象。
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-lg-8">
+                <div class="hcap-card card-primary">
+                    <div class="card-header bg-primary text-white">
+                        <h4 class="mb-0"><i class="fas fa-sliders-h me-2"></i>壓力測試設定</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">1. 選擇測試客戶</label>
+                                <select id="clientSelect" class="form-select form-select-lg">
+                                    </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">2. 選擇壓力情境</label>
+                                <select id="scenarioSelect" class="form-select form-select-lg">
+                                    <option value="recession">經濟衰退 (GDP ↓3%, 失業率 ↑5%)</option>
+                                    <option value="currency">匯率波動 (母國匯率 ↓20%)</option>
+                                    <option value="industry">產業衝擊 (製造業訂單 ↓30%)</option>
+                                    <option value="combined">複合式衝擊 (系統性風險)</option>
+                                </select>
+                            </div>
+
+                            <div class="col-12">
+                                <div id="manualInputPanel">
+                                    <div class="d-flex justify-content-between align-items-center mb-3">
+                                        <h6 class="fw-bold text-primary mb-0"><i class="fas fa-edit me-2"></i>手動參數沙盒 (Manual Sandbox)</h6>
+                                        <span class="badge bg-primary">即時運算中</span>
+                                    </div>
+                                    
+                                    <div class="manual-section-label">A. 職業與財務結構 (Financials)</div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-3">
+                                            <label class="small text-muted">雇主類型</label>
+                                            <select class="form-select form-select-sm" id="man_employer">
+                                                <option value="large_tech">大型科技廠</option>
+                                                <option value="medium_tech" selected>中型電子廠</option>
+                                                <option value="small_factory">傳統工廠</option>
+                                                <option value="unstable">派遣/臨時</option>
+                                            </select>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="small text-muted">月薪 (NT$)</label>
+                                            <input type="number" class="form-control form-control-sm" id="man_salary" value="42000" step="1000">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="small text-muted">貸款金額</label>
+                                            <input type="number" class="form-control form-control-sm" id="man_loan_amt" value="30000" step="5000">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="small text-muted">還款期數</label>
+                                            <select class="form-select form-select-sm" id="man_loan_term">
+                                                <option value="6">6 期 (半年)</option>
+                                                <option value="12" selected>12 期 (一年)</option>
+                                                <option value="18">18 期 (1.5年)</option>
+                                                <option value="24">24 期 (兩年)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="manual-section-label">B. 行為特徵 (Behavior)</div>
+                                    <div class="row g-2 mb-3">
+                                        <div class="col-md-6">
+                                            <label class="small text-muted">匯款規律性 (0-100%)</label>
+                                            <div class="d-flex align-items-center">
+                                                <input type="range" class="form-range flex-grow-1 me-2" id="man_remit" min="0" max="100" value="95">
+                                                <span class="small fw-bold" id="man_remit_val">95%</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <label class="small text-muted">合約剩餘 (月)</label>
+                                            <div class="d-flex align-items-center">
+                                                <input type="range" class="form-range flex-grow-1 me-2" id="man_contract" min="1" max="36" value="24">
+                                                <span class="small fw-bold" id="man_contract_val">24</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="manual-section-label">C. 風險標籤 (Risk Flags)</div>
+                                    <div class="row g-2">
+                                        <div class="col-6 col-md-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="man_risk_unpaid">
+                                                <label class="form-check-label small" for="man_risk_unpaid">曾有無薪假</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="man_risk_ot">
+                                                <label class="form-check-label small" for="man_risk_ot">加班不穩</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="man_risk_voice">
+                                                <label class="form-check-label small" for="man_risk_voice">測謊異常</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-6 col-md-3">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="man_risk_country">
+                                                <label class="form-check-label small" for="man_risk_country">匯率波動大</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-3">
+                                <h5 class="fw-bold border-bottom pb-2">3. 敏感度加權調整</h5>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label">雇主評級下調</label>
+                                        <div class="input-group">
+                                            <input type="range" class="form-range" id="employerAdjust" min="0" max="20" value="0" step="5">
+                                            <span class="input-group-text" id="employerValue">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">加班費縮減</label>
+                                        <div class="input-group">
+                                            <input type="range" class="form-range" id="overtimeAdjust" min="0" max="30" value="0" step="5">
+                                            <span class="input-group-text" id="overtimeValue">0%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label">匯款規律性下降</label>
+                                        <div class="input-group">
+                                            <input type="range" class="form-range" id="remittanceAdjust" min="0" max="20" value="0" step="5">
+                                            <span class="input-group-text" id="remittanceValue">0%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12 mt-4">
+                                <button id="runStressTest" class="btn btn-warning w-100 py-3 fw-bold">
+                                    <i class="fas fa-bolt me-2"></i> 執行壓力測試分析
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="hcap-card card-info h-100">
+                    <div class="card-header bg-info text-white">
+                        <h4 class="mb-0"><i class="fas fa-user me-2"></i>當前客戶概況</h4>
+                    </div>
+                    <div class="card-body d-flex flex-column justify-content-center">
+                        <div id="currentClientInfo" class="text-center w-100">
+                            <div class="spinner-border text-primary" role="status"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-12">
+                <div class="hcap-card card-warning" id="resultsSection" style="display: none;">
+                    <div class="card-header bg-warning text-dark">
+                        <h4 class="mb-0"><i class="fas fa-chart-line me-2"></i>壓力測試結果報告</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-4">
+                            <div class="col-md-8">
+                                <div class="alert alert-warning h-100 d-flex flex-column justify-content-center">
+                                    <h5 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>壓力情境摘要</h5>
+                                    <p id="scenarioDesc" class="mb-0 fs-5">正在計算風險影響...</p>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-center p-3 bg-light rounded h-100 border">
+                                    <div class="text-muted small">衝擊嚴重程度</div>
+                                    <div class="display-6 fw-bold my-2" id="impactLevel">--</div>
+                                    <div class="progress progress-hcap">
+                                        <div class="progress-bar bg-warning" style="width: 0%" id="impactBar"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="fw-bold text-center mb-3">總體評分衝擊</h5>
+                                        <div class="chart-container" style="height: 300px;">
+                                            <canvas id="scoreComparisonChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="fw-bold text-center mb-3">
+                                            <i class="fas fa-radar me-2 text-primary"></i>維度風險雷達
+                                        </h5>
+                                        <p class="text-center small text-muted mb-2">比較原始狀態與壓力下的結構變化</p>
+                                        <div class="chart-container" style="height: 300px;">
+                                            <canvas id="riskRadarChart"></canvas>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-12">
+                                <h5 class="fw-bold mb-3">詳細指標變化表</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-hcap align-middle text-center">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>評估維度</th><th>原始分數</th><th>壓力後分數</th><th>變化幅度</th><th>影響程度</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="metricsTable"></tbody>
+                                    </table>
+                                </div>
+                                
+                                <div class="alert alert-success mt-4 shadow-sm border-0">
+                                    <h5 class="alert-heading"><i class="fas fa-lightbulb me-2"></i>韌性分析結論</h5>
+                                    <p id="conclusionText" class="mb-0">等待執行結果...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="accordion" id="algorithmAccordion">
+                    <div class="accordion-item shadow-sm border-0">
+                        <h2 class="accordion-header" id="headingOne">
+                            <button class="accordion-button collapsed bg-secondary text-white rounded" type="button" data-bs-toggle="collapse" data-bs-target="#collapseOne">
+                                <i class="fas fa-calculator me-2"></i> <strong>點擊查看技術細節：H-CAP 敏感度分析模型算法</strong>
+                            </button>
+                        </h2>
+                        <div id="collapseOne" class="accordion-collapse collapse" data-bs-parent="#algorithmAccordion">
+                            <div class="accordion-body bg-light">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h5 class="text-primary fw-bold mb-3">1. 核心傳導公式</h5>
+                                        <div class="formula-box text-center">
+                                            S<sub>new</sub> = S<sub>old</sub> - [ Δ<sub>shock</sub> × (1 + α<sub>slider</sub>) × β<sub>sensitivity</sub> ]
+                                        </div>
+                                        <ul class="list-unstyled text-muted small px-3">
+                                            <li>S<sub>new</sub>：壓力測試後分數</li>
+                                            <li>S<sub>old</sub>：原始評分</li>
+                                            <li>Δ<sub>shock</sub>：情境基礎衝擊值</li>
+                                            <li>α<sub>slider</sub>：滑桿加權係數</li>
+                                            <li>β<sub>sensitivity</sub>：維度敏感度係數</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h5 class="text-primary fw-bold mb-3">2. 敏感度係數參數表</h5>
+                                        <table class="table table-sm table-bordered text-center bg-white small">
+                                            <thead class="table-light">
+                                                <tr><th>風險因子 \ 維度</th><th>償債能力</th><th>收入穩定</th><th>還款意願</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                <tr><td>加班費波動</td><td class="text-danger fw-bold">0.25</td><td class="text-warning">0.40</td><td>-</td></tr>
+                                                <tr><td>雇主評級下調</td><td>-</td><td class="text-danger fw-bold">0.40</td><td>-</td></tr>
+                                                <tr><td>匯率波動</td><td>-</td><td>-</td><td class="text-danger fw-bold">0.60</td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 1. 內建範本
+        const templates = {
+            low_risk: { name: "範本: Nguyen Van A (低風險)", breakdown: { repayment_capacity: {score: 85}, income_stability: {score: 82}, repayment_willingness: {score: 92}, external_risk: {score: 70} }, loan_amount: 40000, score: 765 },
+            medium_risk: { name: "範本: Maria Santos (中風險)", breakdown: { repayment_capacity: {score: 75}, income_stability: {score: 70}, repayment_willingness: {score: 80}, external_risk: {score: 65} }, loan_amount: 30000, score: 680 },
+            high_risk: { name: "範本: Budi Santoso (高風險)", breakdown: { repayment_capacity: {score: 50}, income_stability: {score: 40}, repayment_willingness: {score: 65}, external_risk: {score: 55} }, loan_amount: 0, score: 520 }
+        };
+
+        // 2. 接收 Session 資料
+        const serverCustomClient = {{ (custom_client | tojson | safe) if custom_client else 'null' | safe }};
+
+        // 3. 全局 clients 物件
+        let clients = JSON.parse(JSON.stringify(templates));
+
+        // 4. 初始化
+        function init() {
+            const select = document.getElementById('clientSelect');
+            select.innerHTML = '';
+
+            // 加入 Manual 選項
+            const manualOpt = document.createElement('option');
+            manualOpt.value = 'manual';
+            manualOpt.text = '🛠️ 手動調整參數 (即時試算)';
+            select.appendChild(manualOpt);
+
+            // 加入 Custom (若有)
+            if (serverCustomClient) {
+                const opt = document.createElement('option');
+                opt.value = 'custom';
+                opt.text = `★ 自定義客戶 - ${serverCustomClient.name} (來自首頁)`;
+                clients['custom'] = {
+                    name: serverCustomClient.name,
+                    score: serverCustomClient.hcap_score,
+                    breakdown: serverCustomClient.score_breakdown || { repayment_capacity: {score:70}, income_stability: {score:70}, repayment_willingness: {score:70}, external_risk: {score:70} },
+                    loan_amount: serverCustomClient.loan_recommendation?.survival_loan?.max_amount || 0,
+                    raw: serverCustomClient // 保存原始資料供繼承
+                };
+                select.appendChild(opt);
+            }
+
+            // 加入範本
+            for (const key of ['low_risk', 'medium_risk', 'high_risk']) {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.text = clients[key].name;
+                select.appendChild(opt);
+            }
+
+            // 預設選擇
+            select.value = clients['custom'] ? 'custom' : 'manual';
+            
+            // 預先填入數據 (Smart Inheritance)
+            if (clients['custom']) prefillManualFromCustom(serverCustomClient);
+
+            updateUI();
+        }
+
+        // 繼承資料
+        function prefillManualFromCustom(data) {
+            if (!data) return;
+            // 嘗試還原表單資料
+            if (data.adjusted_salary) document.getElementById('man_salary').value = data.adjusted_salary;
+            
+            // 雇主還原
+            const empStr = data.employer || "";
+            if (empStr.includes("鴻海")) document.getElementById('man_employer').value = "large_tech";
+            else if (empStr.includes("緯創")) document.getElementById('man_employer').value = "medium_tech";
+            else if (empStr.includes("傳統")) document.getElementById('man_employer').value = "small_factory";
+            else document.getElementById('man_employer').value = "unstable";
+
+            // 風險還原
+            const risks = data.risk_factors || [];
+            document.getElementById('man_risk_unpaid').checked = risks.includes("曾有無薪假記錄");
+            document.getElementById('man_risk_ot').checked = risks.includes("加班時數不穩定");
+            document.getElementById('man_risk_voice').checked = risks.includes("AI語音測謊異常");
+            document.getElementById('man_risk_country').checked = risks.includes("母國匯率波動大");
+            
+            // 行為還原
+            if (data.behavior_data) {
+                document.getElementById('man_remit').value = data.behavior_data.remittance_regularity || 90;
+                document.getElementById('man_remit_val').innerText = (data.behavior_data.remittance_regularity || 90) + '%';
+            }
+            if (data.contract_remaining) {
+                document.getElementById('man_contract').value = data.contract_remaining;
+                document.getElementById('man_contract_val').innerText = data.contract_remaining;
+            }
+        }
+
+        // 手動計算邏輯
+        function calculateManualScore() {
+            const empType = document.getElementById('man_employer').value;
+            const salary = parseInt(document.getElementById('man_salary').value);
+            const loanAmt = parseInt(document.getElementById('man_loan_amt').value);
+            const term = parseInt(document.getElementById('man_loan_term').value);
+            const remit = parseInt(document.getElementById('man_remit').value);
+            const contract = parseInt(document.getElementById('man_contract').value);
+            
+            const r_unpaid = document.getElementById('man_risk_unpaid').checked;
+            const r_ot = document.getElementById('man_risk_ot').checked;
+            const r_voice = document.getElementById('man_risk_voice').checked;
+            const r_country = document.getElementById('man_risk_country').checked;
+
+            // 1. 償債能力 (DBR)
+            const rate = loanAmt <= 30000 ? 0.105 : 0.15;
+            const monthlyRate = rate / 12;
+            const pmt = Math.round(loanAmt * monthlyRate * Math.pow(1+monthlyRate, term) / (Math.pow(1+monthlyRate, term)-1));
+            const dbr = (pmt / salary) * 100;
+            let scoreCap = Math.max(20, 100 - (dbr - 20) * 2);
+            if (dbr <= 25) scoreCap = 95;
+
+            // 2. 收入穩定
+            const empMap = { large_tech: 95, medium_tech: 80, small_factory: 65, unstable: 55 };
+            let scoreInc = (empMap[empType] * 0.6) + (Math.min(100, contract * 3) * 0.4);
+            if (r_unpaid) scoreInc -= 20;
+            if (r_ot) scoreInc -= 10;
+
+            // 3. 還款意願
+            let scoreWill = remit;
+            if (r_voice) scoreWill -= 25;
+
+            // 4. 外部風險
+            let scoreExt = 80;
+            if (r_country) scoreExt -= 20;
+            
+            // 總分
+            let final = Math.round((scoreCap*0.4 + scoreInc*0.3 + scoreWill*0.2 + scoreExt*0.1) * 8.5);
+            final = Math.max(300, Math.min(850, final));
+
+            const loanApproved = final >= 600;
+
+            return {
+                name: "手動設定客戶",
+                score: final,
+                breakdown: {
+                    repayment_capacity: {score: Math.round(scoreCap)},
+                    income_stability: {score: Math.round(scoreInc)},
+                    repayment_willingness: {score: Math.round(scoreWill)},
+                    external_risk: {score: Math.round(scoreExt)}
+                },
+                loan_amount: loanApproved ? Math.min(loanAmt, 50000) : 0
+            };
+        }
+
+        function updateUI() {
+            const key = document.getElementById('clientSelect').value;
+            const manualPanel = document.getElementById('manualInputPanel');
+            const alertBox = document.getElementById('dataStatusAlert');
+            
+            let clientData;
+
+            if (key === 'manual') {
+                manualPanel.style.display = 'block';
+                alertBox.className = 'alert alert-info alert-dismissible fade show';
+                alertBox.innerHTML = '<strong>模式：</strong>您正在使用手動參數進行即時運算。';
+                clientData = calculateManualScore();
+                clients['manual'] = clientData;
+            } else {
+                manualPanel.style.display = 'none';
+                clientData = clients[key];
+                
+                if (key === 'custom' && serverCustomClient) {
+                    prefillManualFromCustom(serverCustomClient);
+                    alertBox.className = 'alert alert-success alert-dismissible fade show';
+                    alertBox.innerHTML = '<strong>模式：</strong>已載入首頁生成的客戶資料。';
+                } else {
+                    alertBox.className = 'alert alert-secondary alert-dismissible fade show';
+                    alertBox.innerHTML = '<strong>模式：</strong>使用標準內建範本。';
+                }
+            }
+
+            renderClientInfo(clientData);
+        }
+
+        function renderClientInfo(client) {
+            const badge = client.loan_amount > 0 
+                ? '<span class="badge bg-success">可核貸</span>' 
+                : '<span class="badge bg-danger">拒絕</span>';
+
+            document.getElementById('currentClientInfo').innerHTML = `
+                <div class="mb-3">
+                    <h2 class="display-4 fw-bold text-primary mb-0">${client.score}</h2>
+                    <div class="small text-muted">H-CAP 基礎評分</div>
+                </div>
+                <div class="row text-start g-2 mb-2 px-3">
+                    <div class="col-12 d-flex justify-content-between">
+                        <span>償債能力</span><span class="fw-bold">${client.breakdown.repayment_capacity.score}</span>
+                    </div>
+                    <div class="col-12"><div class="progress" style="height:6px"><div class="progress-bar bg-success" style="width:${client.breakdown.repayment_capacity.score}%"></div></div></div>
+                    
+                    <div class="col-12 d-flex justify-content-between mt-2">
+                        <span>收入穩定</span><span class="fw-bold">${client.breakdown.income_stability.score}</span>
+                    </div>
+                    <div class="col-12"><div class="progress" style="height:6px"><div class="progress-bar bg-info" style="width:${client.breakdown.income_stability.score}%"></div></div></div>
+                </div>
+            `;
+        }
+
+        // 監聽
+        document.getElementById('clientSelect').addEventListener('change', updateUI);
+        
+        // 監聽所有手動輸入欄位
+        const manualIds = ['man_employer', 'man_salary', 'man_loan_amt', 'man_loan_term', 
+                           'man_remit', 'man_contract', 
+                           'man_risk_unpaid', 'man_risk_ot', 'man_risk_voice', 'man_risk_country'];
+        manualIds.forEach(id => {
+            document.getElementById(id).addEventListener('input', updateUI);
+        });
+
+        // 數值顯示同步
+        document.getElementById('man_remit').addEventListener('input', function() { document.getElementById('man_remit_val').innerText = this.value + '%'; });
+        document.getElementById('man_contract').addEventListener('input', function() { document.getElementById('man_contract_val').innerText = this.value; });
+
+        // 滑桿
+        ['employer', 'overtime', 'remittance'].forEach(type => {
+            document.getElementById(type + 'Adjust').addEventListener('input', function() {
+                document.getElementById(type + 'Value').textContent = '+' + this.value + '%';
+            });
+        });
+
+        // 壓力測試 (修正文字與小數點)
+        const scenarios = {
+            recession: { name: "經濟衰退", desc: "GDP下降3%，失業率上升5%。", impacts: { employer_rating: -15, overtime: -20, remittance: -5, external_risk: -15 } },
+            currency: { name: "匯率波動", desc: "母國匯率貶值20%。", impacts: { employer_rating: 0, overtime: 0, remittance: -15, external_risk: -25 } },
+            industry: { name: "產業衝擊", desc: "製造業訂單下降30%。", impacts: { employer_rating: -20, overtime: -25, remittance: -10, external_risk: -15 } },
+            combined: { name: "複合式衝擊", desc: "系統性風險同時發生。", impacts: { employer_rating: -25, overtime: -30, remittance: -20, external_risk: -35 } }
+        };
+
+        let scoreComparisonChart = null;
+        let riskRadarChart = null;
+
+        document.getElementById('runStressTest').addEventListener('click', function() {
+            const key = document.getElementById('clientSelect').value;
+            const scenario = scenarios[document.getElementById('scenarioSelect').value];
+            const client = clients[key]; 
+
+            const adj = {
+                emp: parseInt(document.getElementById('employerAdjust').value) / 100,
+                ot: parseInt(document.getElementById('overtimeAdjust').value) / 100,
+                remit: parseInt(document.getElementById('remittanceAdjust').value) / 100
+            };
+
+            const newScores = calculateStress(client, scenario, adj);
+            
+            document.getElementById('resultsSection').style.display = 'block';
+            document.getElementById('scenarioDesc').innerText = `${scenario.name}：${scenario.desc}`;
+            
+            const drop = Math.round((1 - newScores.final / client.score) * 100);
+            document.getElementById('impactLevel').innerText = drop > 20 ? "嚴重" : drop > 10 ? "中度" : "輕微";
+            document.getElementById('impactBar').style.width = Math.min(100, drop * 3) + "%";
+
+            renderCharts(client, newScores);
+            renderTable(client, newScores);
+            renderConclusion(newScores, drop);
+            
+            document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth' });
+        });
+
+        // 修正 1: 加上 Math.round 避免出現 63.59999 這種醜數字
+        function calculateStress(client, scenario, adj) {
+            const b = client.breakdown;
+            const imp = scenario.impacts;
+            
+            // 這裡每一項都加上 Math.round 確保整數
+            const s_cap = Math.max(20, Math.round(b.repayment_capacity.score + (imp.overtime * (1+adj.ot) * 0.8)));
+            const s_inc = Math.max(20, Math.round(b.income_stability.score + (imp.employer_rating * (1+adj.emp) * 0.6)));
+            const s_will = Math.max(20, Math.round(b.repayment_willingness.score + (imp.remittance * (1+adj.remit) * 0.9)));
+            const s_ext = Math.max(20, Math.round(b.external_risk.score + imp.external_risk));
+
+            const final = Math.round((s_cap*0.4 + s_inc*0.3 + s_will*0.2 + s_ext*0.1) * 8.5);
+            return { cap: s_cap, inc: s_inc, will: s_will, ext: s_ext, final: Math.max(300, final) };
+        }
+
+        function renderCharts(client, stressed) {
+            const ctx1 = document.getElementById('scoreComparisonChart').getContext('2d');
+            if (scoreComparisonChart) scoreComparisonChart.destroy();
+            scoreComparisonChart = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: ['原始', '壓力後'],
+                    datasets: [{ label: 'H-CAP', data: [client.score, stressed.final], backgroundColor: ['#0d6efd', stressed.final < 600 ? '#dc3545' : '#ffc107'] }]
+                },
+                options: { scales: { y: { min: 200, max: 900 } } }
+            });
+
+            const ctx2 = document.getElementById('riskRadarChart').getContext('2d');
+            if (riskRadarChart) riskRadarChart.destroy();
+            riskRadarChart = new Chart(ctx2, {
+                type: 'radar',
+                data: {
+                    labels: ['償債', '穩定', '意願', '外部'],
+                    datasets: [
+                        { label: '原始', data: [client.breakdown.repayment_capacity.score, client.breakdown.income_stability.score, client.breakdown.repayment_willingness.score, client.breakdown.external_risk.score], borderColor: '#0d6efd', borderWidth: 2 },
+                        { label: '壓力', data: [stressed.cap, stressed.inc, stressed.will, stressed.ext], borderColor: '#dc3545', borderWidth: 2, backgroundColor: 'rgba(220,53,69,0.2)' }
+                    ]
+                },
+                options: { scales: { r: { min: 0, max: 100 } } }
+            });
+        }
+
+        // 修正 2: 解決變數名稱重複導致的文字被覆蓋問題
+        function renderTable(client, stressed) {
+            const t = document.getElementById('metricsTable');
+            t.innerHTML = '';
+            
+            const rows = [
+                { title: '償債能力 (Capacity)', old: client.breakdown.repayment_capacity.score, newScore: stressed.cap },
+                { title: '收入穩定 (Stability)', old: client.breakdown.income_stability.score, newScore: stressed.inc },
+                { title: '還款意願 (Willingness)', old: client.breakdown.repayment_willingness.score, newScore: stressed.will },
+                { title: '外部風險 (External)', old: client.breakdown.external_risk.score, newScore: stressed.ext }
+            ];
+
+            rows.forEach(r => {
+                const diff = r.newScore - r.old;
+                const colorClass = diff < 0 ? 'text-danger' : (diff > 0 ? 'text-success' : 'text-muted');
+                const sign = diff > 0 ? '+' : '';
+                let impactBadge = '';
+                if (Math.abs(diff) >= 15) impactBadge = '<span class="badge bg-danger">高 (High)</span>';
+                else if (Math.abs(diff) >= 5) impactBadge = '<span class="badge bg-warning text-dark">中 (Mid)</span>';
+                else impactBadge = '<span class="badge bg-success">低 (Low)</span>';
+
+                t.innerHTML += `
+                    <tr>
+                        <td class="fw-bold text-start ps-4">${r.title}</td>
+                        <td class="text-muted">${r.old}</td>
+                        <td class="fw-bold">${r.newScore}</td>
+                        <td class="${colorClass} fw-bold">${sign}${diff}</td>
+                        <td>${impactBadge}</td>
+                    </tr>
+                `;
+            });
+        }
+
+        function renderConclusion(stressed, drop) {
+            const txt = document.getElementById('conclusionText');
+            if (stressed.final < 600) txt.innerHTML = `<strong>⚠️ 高風險：</strong>評分跌破 600。建議凍結額度或追加保證人。`;
+            else if (stressed.final < 700) txt.innerHTML = `<strong>⚠️ 需關注：</strong>評分下降顯著 (${drop}%)，建議縮短貸款週期。`;
+            else txt.innerHTML = `<strong>✅ 結構強健：</strong>客戶具備足夠風險緩衝能力。`;
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

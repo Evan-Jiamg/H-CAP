@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系統算法說明 | H-CAP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+            startup: { pageReady: () => MathJax.startup.defaultPageReady() }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        html { scroll-behavior: smooth; }
+        body { background: #f0f2f5; }
+
+        .back-buttons-group { position: fixed; top: 20px; left: 20px; z-index: 1000; display: flex; gap: 10px; pointer-events: none; }
+        .back-button { background: white; border: 2px solid #dee2e6; border-radius: 8px; padding: 10px 20px; text-decoration: none; color: #495057; font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.1); transition: all 0.3s ease; display: flex; align-items: center; pointer-events: auto; }
+        .back-button:hover { background: #f8f9fa; color: #212529; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+        /* Hero - 圓角卡片式 */
+        .hero-section { background: linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%); padding: 1.5rem 0 1.2rem; margin: 0 auto 2rem; border-radius: 20px; max-width: 1320px; box-shadow: 0 4px 24px rgba(0,0,0,0.15); position: relative; z-index: 1; }
+
+        /* Pipeline */
+        .pipeline { display: flex; align-items: stretch; gap: 0.4rem; }
+        .pipe-step { flex: 1; text-align: center; padding: 1rem 0.8rem; background: rgba(255,255,255,0.12); border-radius: 10px; border: 1px solid rgba(255,255,255,0.18); cursor: pointer; transition: all 0.2s; }
+        .pipe-step:hover { background: rgba(255,255,255,0.22); transform: translateY(-2px); }
+        .pipe-step .pipe-num { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.25); color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 800; font-size: 1rem; margin-bottom: 0.5rem; }
+        .pipe-step .pipe-title { color: white; font-weight: 700; font-size: 1rem; margin-bottom: 0.3rem; }
+        .pipe-step .pipe-desc { color: rgba(255,255,255,0.85); font-size: 0.88rem; line-height: 1.5; }
+        .pipe-arrow { color: rgba(255,255,255,0.5); font-size: 1.1rem; display: flex; align-items: center; flex-shrink: 0; }
+
+        /* 權重對比 */
+        .weight-compare { border-radius: 16px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
+
+        /* 維度 Accordion */
+        .dim-card { border: none; border-radius: 14px !important; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.06); margin-bottom: 1rem; }
+        .dim-header { padding: 1rem 1.5rem; cursor: pointer; display: flex; align-items: center; gap: 1rem; transition: all 0.2s; border: none; background: white; }
+        .dim-header:hover { background: #f8f9fa; }
+        .dim-header .dim-icon { width: 44px; height: 44px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; color: white; flex-shrink: 0; }
+        .dim-header .dim-info { flex: 1; }
+        .dim-header .dim-info h6 { margin: 0; font-weight: 700; font-size: 1.1rem; }
+        .dim-header .dim-info small { color: #718096; font-size: 0.9rem; }
+        .dim-header .dim-weights { display: flex; gap: 0.5rem; align-items: center; }
+        .dim-header .dim-weights .w-tag { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 700; }
+        .dim-header .chevron { transition: transform 0.3s; color: #adb5bd; font-size: 1.2rem; }
+        .dim-header[aria-expanded="true"] .chevron { transform: rotate(180deg); }
+        .dim-body { padding: 0 1.5rem 1.5rem; }
+
+        /* 核准政策表格 */
+        .policy-table { border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0; }
+        .policy-header { display: flex; align-items: center; padding: 0.7rem 1.2rem; background: #2d3748; color: white; font-weight: 700; font-size: 0.9rem; }
+        .policy-header > div:first-child { min-width: 100px; margin-right: 1.2rem; }
+        .policy-header > div:nth-child(2) { min-width: 100px; margin-right: 1.2rem; }
+        .policy-header > div:nth-child(3) { flex: 1; }
+        .score-tier { padding: 0.9rem 1.2rem; display: flex; align-items: center; border-bottom: 1px solid #e2e8f0; }
+        .score-tier:last-of-type { border-bottom: none; }
+        .score-tier .tier-range { font-size: 1.4rem; font-weight: 800; min-width: 100px; margin-right: 1.2rem; }
+        .score-tier .tier-level { font-size: 0.95rem; font-weight: 700; min-width: 120px; margin-right: 1.2rem; }
+        .score-tier .tier-level .badge { font-size: 1rem; padding: 0.4rem 0.7rem; }
+        .score-tier .tier-policy { font-size: 1.02rem; color: #4a5568; flex: 1; }
+        .score-tier .tier-policy strong { font-size: 1.05rem; }
+
+        /* 維度左右分隔線 */
+        .dim-divider { border-right: 2px solid #e2e8f0; }
+
+        /* 試算流程 */
+        .calc-flow { display: flex; gap: 0; align-items: stretch; flex-wrap: wrap; }
+        .calc-step { flex: 1; min-width: 180px; background: white; border-radius: 12px; padding: 1.2rem; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .calc-step .step-label { font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 1px; margin-bottom: 0.5rem; }
+        .calc-step .step-value { font-size: 1.8rem; font-weight: 800; }
+        .calc-arrow { display: flex; align-items: center; padding: 0 0.4rem; color: #cbd5e0; font-size: 1.5rem; }
+
+        /* 公式區 */
+        .formula-box { background: #f7fafc; border-left: 4px solid #4299e1; padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 0.8rem 0; font-size: 1rem; }
+        .formula-box-card { background: #f0fff4; border-left: 4px solid #48bb78; padding: 1rem 1.2rem; border-radius: 0 8px 8px 0; margin: 0.8rem 0; font-size: 1rem; }
+
+        /* 表格 */
+        .compact-table { font-size: 0.95rem; }
+        .compact-table th { background: #2d3748; color: white; font-weight: 600; padding: 0.6rem 0.8rem; }
+        .compact-table td { padding: 0.55rem 0.8rem; font-size: 0.95rem; }
+
+        /* Section */
+        .section-title { font-size: 1.2rem; font-weight: 700; color: #2d3748; margin-bottom: 1.5rem; padding-bottom: 0.8rem; border-bottom: 2px solid #e2e8f0; }
+        .section-title i { margin-right: 0.5rem; }
+
+        /* 內文字體加大 */
+        .dim-body p, .dim-body small, .dim-body .text-muted { font-size: 0.95rem; }
+        .dim-body .fw-bold { font-size: 1rem; }
+
+        /* 風險對照邏輯圖 */
+        .risk-flow-card { background: white; border-radius: 12px; padding: 1rem 1.2rem; text-align: center; flex: 1; min-width: 100px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        .risk-flow-card .risk-label { font-size: 0.85rem; font-weight: 700; margin-bottom: 0.3rem; }
+        .risk-flow-card .risk-score { font-size: 1.5rem; font-weight: 800; }
+        .risk-flow-card .risk-desc { font-size: 0.82rem; color: #718096; }
+        .risk-flow-arrow { display: flex; align-items: center; color: #cbd5e0; font-size: 1.2rem; padding: 0 0.3rem; }
+
+        @media (max-width: 768px) {
+            .pipeline { flex-direction: column; }
+            .pipe-arrow { transform: rotate(90deg); justify-content: center; padding: 0.3rem 0; }
+            .calc-flow { flex-direction: column; }
+            .calc-arrow { transform: rotate(90deg); justify-content: center; padding: 0.3rem 0; }
+            .dim-header .dim-weights { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="back-buttons-group">
+        <a href="/portal/bank" class="back-button"><i class="bi bi-arrow-left me-2"></i>返回銀行端管理平台</a>
+        <a href="/" class="back-button"><i class="bi bi-house-door me-2"></i>首頁</a>
+    </div>
+
+    <!-- ==================== HERO + PIPELINE ==================== -->
+    <div class="hero-section" style="margin-top: 2.5rem;">
+        <div class="container-xl">
+            <div class="text-center text-white mb-3" style="padding-top: 2rem;">
+                <h2 class="fw-bold mb-2"><i class="bi bi-cpu me-2"></i>H-CAP 雙軌制算法核心</h2>
+                <p class="mb-0 opacity-75" style="font-size:1rem;">一張圖看懂：從原始數據到 850 分的評分流程</p>
+            </div>
+
+            <!-- Pipeline -->
+            <div class="pipeline rounded-3" style="padding-top: 4px;">
+                <div class="pipe-step" onclick="document.getElementById('sec-data').scrollIntoView({behavior:'smooth', block:'start'})">
+                    <div class="pipe-num">1</div>
+                    <div class="pipe-title">行為數據收集</div>
+                    <div class="pipe-desc">B2B 薪資、雇主信譽、行為特徵</div>
+                </div>
+                <div class="pipe-arrow"><i class="bi bi-chevron-right"></i></div>
+                <div class="pipe-step" onclick="document.getElementById('sec-dims').scrollIntoView({behavior:'smooth', block:'start'})">
+                    <div class="pipe-num">2</div>
+                    <div class="pipe-title">四維評分</div>
+                    <div class="pipe-desc">維度分數 = f(原始數據) &isin; [0, 100]</div>
+                </div>
+                <div class="pipe-arrow"><i class="bi bi-chevron-right"></i></div>
+                <div class="pipe-step" onclick="document.getElementById('sec-weight').scrollIntoView({behavior:'smooth', block:'start'})">
+                    <div class="pipe-num">3</div>
+                    <div class="pipe-title">加權合成</div>
+                    <div class="pipe-desc">基礎分 = &Sigma;(維度分數 &times; 權重)</div>
+                </div>
+                <div class="pipe-arrow"><i class="bi bi-chevron-right"></i></div>
+                <div class="pipe-step" onclick="document.getElementById('sec-score').scrollIntoView({behavior:'smooth', block:'start'})">
+                    <div class="pipe-num">4</div>
+                    <div class="pipe-title">H-CAP Score</div>
+                    <div class="pipe-desc">基礎分 &times; 8.5 &rarr; 400~850 分</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container-xl pb-5">
+
+        <!-- ==================== 1. 行為數據收集 ==================== -->
+        <div class="section-title" id="sec-data"><i class="bi bi-collection"></i>1. 行為數據收集</div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="bg-white rounded-4 p-4 shadow-sm h-100">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-primary fs-6 px-3 py-2 me-2"><i class="bi bi-cash-coin me-1"></i>現金信貸</span>
+                    </div>
+                    <div class="d-flex flex-column gap-2" style="font-size:0.95rem;">
+                        <div class="d-flex align-items-start"><i class="bi bi-check-circle-fill text-primary me-2 mt-1"></i><div><strong>B2B 薪資數據：</strong>企業 HR 系統對接</div></div>
+                        <div class="d-flex align-items-start"><i class="bi bi-check-circle-fill text-primary me-2 mt-1"></i><div><strong>雇主信譽數據：</strong>企業評級、產業前景</div></div>
+                        <div class="d-flex align-items-start"><i class="bi bi-check-circle-fill text-primary me-2 mt-1"></i><div><strong>行為特徵數據：</strong>匯款規律、AI 語音分析</div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="bg-white rounded-4 p-4 shadow-sm h-100">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-success fs-6 px-3 py-2 me-2"><i class="bi bi-credit-card me-1"></i>信用卡</span>
+                    </div>
+                    <div class="d-flex flex-column gap-2" style="font-size:0.95rem;">
+                        <div class="d-flex align-items-start"><i class="bi bi-check-circle-fill text-success me-2 mt-1"></i><div><strong>消費潛力：</strong>薪資結構與可支配所得</div></div>
+                        <div class="d-flex align-items-start"><i class="bi bi-check-circle-fill text-success me-2 mt-1"></i><div><strong>還款意願指標：</strong>跨境匯款規律性、APP 使用頻率</div></div>
+                        <div class="d-flex align-items-start"><i class="bi bi-check-circle-fill text-success me-2 mt-1"></i><div><strong>居留穩定度：</strong>雇主類型與合約長度</div></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 2. 四大評分維度 Accordion ==================== -->
+        <div class="section-title" id="sec-dims"><i class="bi bi-layers"></i>2. 四大評分維度詳解（點擊展開）</div>
+
+        <div class="accordion" id="dimAccordion">
+
+            <!-- ==================== 維度一：償債能力 ==================== -->
+            <div class="dim-card">
+                <div class="dim-header" data-bs-toggle="collapse" data-bs-target="#dim1" aria-expanded="false">
+                    <div class="dim-icon" style="background: linear-gradient(135deg, #28a745, #20c997);"><i class="bi bi-calculator"></i></div>
+                    <div class="dim-info">
+                        <h6>維度一：償債能力</h6>
+                        <small>核心指標：債務所得比 (DBR) — 月付金佔月薪的比例</small>
+                    </div>
+                    <div class="dim-weights">
+                        <span class="w-tag" style="background:#e8f5e9;color:#2e7d32;">信貸 40%</span>
+                        <span class="w-tag" style="background:#e8f5e9;color:#2e7d32;">信用卡 20%</span>
+                    </div>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </div>
+                <div id="dim1" class="collapse" data-bs-parent="#dimAccordion">
+                    <div class="dim-body">
+                        <!-- DBR 圖 - 可收合 (置頂) -->
+                        <div class="mb-3 mt-2">
+                            <a class="d-inline-flex align-items-center text-decoration-none" data-bs-toggle="collapse" href="#dbrDiagram" role="button" aria-expanded="false" style="font-size:1.08rem; color: #4a5568;">
+                                <i class="bi bi-image me-2"></i>
+                                <span class="fw-bold">DBR 計算邏輯流程圖解</span>
+                                <span class="text-muted ms-2" style="font-size:0.93rem;">（點擊展開）</span>
+                                <i class="bi bi-chevron-down ms-1" style="font-size:0.85rem; transition: transform 0.3s;"></i>
+                            </a>
+                            <div class="collapse mt-2" id="dbrDiagram">
+                                <div class="text-center p-3 bg-white rounded-3 border">
+                                    <img src="{{ url_for('static', filename='images/dbr_diagram.png') }}" class="img-fluid rounded" alt="DBR 圖解" style="max-height: 280px;">
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 信貸 (藍色區塊) - 水平 -->
+                        <div class="border rounded-4 p-4 mb-3" style="background: #f0f6ff; border-color: #0d6efd !important;">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge px-3 py-2 me-2" style="font-size:0.95rem; background: linear-gradient(135deg, #0d6efd, #6ea8fe); color: white;"><i class="bi bi-cash-coin me-1"></i>信貸</span>
+                                <span class="text-muted" style="font-size:0.9rem;">PMT 本息攤還模型</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <div class="formula-box">
+                                        <strong style="font-size:1.05rem;">信貸 DBR = 每月還款額 &divide; 月薪 &times; 100%</strong><br>
+                                        <span class="text-muted" style="font-size:0.95rem;">安全線：DBR &le; 30%</span>
+                                    </div>
+                                    <p class="fw-bold mt-3 mb-2" style="font-size:1rem;"><i class="bi bi-percent me-1 text-primary"></i>貸款利率級距</p>
+                                    <div class="d-flex gap-2">
+                                        <div class="border rounded p-3 text-center flex-fill bg-white">
+                                            <div class="fw-bold text-success" style="font-size:0.95rem;">&le; 3 萬</div>
+                                            <div class="text-primary fw-bold" style="font-size:1.3rem;">10.5%</div>
+                                        </div>
+                                        <div class="border rounded p-3 text-center flex-fill bg-white">
+                                            <div class="fw-bold text-warning" style="font-size:0.95rem;">3-4 萬</div>
+                                            <div class="text-primary fw-bold" style="font-size:1.3rem;">12.5%</div>
+                                        </div>
+                                        <div class="border rounded p-3 text-center flex-fill bg-white">
+                                            <div class="fw-bold text-danger" style="font-size:0.95rem;">> 4 萬</div>
+                                            <div class="text-primary fw-bold" style="font-size:1.3rem;">15.0%</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <table class="table compact-table table-bordered mb-0">
+                                        <thead><tr><th>信貸 DBR</th><th>分數</th><th>政策</th></tr></thead>
+                                        <tbody>
+                                            <tr class="table-success"><td>&le; 25%</td><td>90-100</td><td>優先核貸</td></tr>
+                                            <tr class="table-success"><td>25-30%</td><td>80-90</td><td>正常核貸</td></tr>
+                                            <tr class="table-warning"><td>30-40%</td><td>60-80</td><td>限額/嚴審</td></tr>
+                                            <tr class="table-danger"><td>> 40%</td><td>40-60</td><td>建議婉拒</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 信用卡 (綠色區塊) - 水平 -->
+                        <div class="border rounded-4 p-4" style="background: #f0faf4; border-color: #28a745 !important;">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge px-3 py-2 me-2" style="font-size:0.95rem; background: linear-gradient(135deg, #28a745, #20c997); color: white;"><i class="bi bi-credit-card me-1"></i>信用卡</span>
+                                <span class="text-muted" style="font-size:0.9rem;">最低應繳模擬</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <div class="formula-box-card">
+                                        <strong style="font-size:1.05rem;">信用卡 DBR = 額度 &times; 10% &divide; 月薪 &times; 100%</strong><br>
+                                        <span class="text-muted" style="font-size:0.95rem;">假設刷滿額度，以最低應繳計算負擔</span>
+                                    </div>
+                                    <p class="fw-bold mt-3 mb-2" style="font-size:1rem;"><i class="bi bi-lightbulb me-1 text-success"></i>範例模擬</p>
+                                    <div class="border rounded p-3" style="background:#e8f5e9;">
+                                        <p class="mb-2" style="font-size:0.95rem;">系統假設持卡人刷滿額度，需支付 10% 作為最低應繳款：</p>
+                                        <div class="d-flex gap-2">
+                                            <div class="border rounded p-3 text-center flex-fill bg-white">
+                                                <div class="text-muted" style="font-size:0.85rem;">假設額度</div>
+                                                <div class="fw-bold text-primary" style="font-size:1.3rem;">NT$ 30,000</div>
+                                            </div>
+                                            <div class="border rounded p-3 text-center flex-fill bg-white">
+                                                <div class="text-muted" style="font-size:0.85rem;">最低應繳</div>
+                                                <div class="fw-bold text-danger" style="font-size:1.3rem;">NT$ 3,000</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <table class="table compact-table table-bordered mb-0">
+                                        <thead><tr><th>信用卡 DBR</th><th>分數</th><th>負擔程度</th></tr></thead>
+                                        <tbody>
+                                            <tr class="table-success"><td>&le; 20%</td><td>95</td><td>極輕</td></tr>
+                                            <tr class="table-success"><td>20-40%</td><td>80</td><td>健康</td></tr>
+                                            <tr class="table-warning"><td>40-60%</td><td>60</td><td>警戒</td></tr>
+                                            <tr class="table-danger"><td>> 60%</td><td>40</td><td>高風險</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 維度二：收入穩定度 ==================== -->
+            <div class="dim-card">
+                <div class="dim-header" data-bs-toggle="collapse" data-bs-target="#dim2" aria-expanded="false">
+                    <div class="dim-icon" style="background: linear-gradient(135deg, #0d6efd, #6ea8fe);"><i class="bi bi-graph-up"></i></div>
+                    <div class="dim-info">
+                        <h6>維度二：收入穩定度</h6>
+                        <small>合約穩定性 + 雇主品質 雙指標加權</small>
+                    </div>
+                    <div class="dim-weights">
+                        <span class="w-tag" style="background:#e3f2fd;color:#1565c0;">信貸 30%</span>
+                        <span class="w-tag" style="background:#e3f2fd;color:#1565c0;">信用卡 30%</span>
+                    </div>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </div>
+                <div id="dim2" class="collapse" data-bs-parent="#dimAccordion">
+                    <div class="dim-body">
+                        <div class="formula-box mb-3"><strong style="font-size:1.05rem;">穩定度 = 合約分數 &times; 0.4 + 雇主評分 &times; 0.6</strong></div>
+                        <!-- 信貸 (藍色區塊) - 水平 -->
+                        <div class="border rounded-4 p-4 mb-3" style="background: #f0f6ff; border-color: #0d6efd !important;">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge px-3 py-2 me-2" style="font-size:0.95rem; background: linear-gradient(135deg, #0d6efd, #6ea8fe); color: white;"><i class="bi bi-cash-coin me-1"></i>信貸</span>
+                                <span class="text-muted" style="font-size:0.9rem;">合約穩定性 + 雇主品質</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <p class="mb-2" style="font-size:0.95rem;"><strong>合約穩定性</strong>（公式：min(100, 剩餘月數 &times; 3)）</p>
+                                    <table class="table compact-table table-bordered mb-0">
+                                        <thead><tr><th>合約剩餘</th><th>分數</th></tr></thead>
+                                        <tbody>
+                                            <tr class="table-success"><td>&ge; 33 個月</td><td class="fw-bold">100 分</td></tr>
+                                            <tr><td>24 個月</td><td class="fw-bold">72 分</td></tr>
+                                            <tr class="table-warning"><td>12 個月</td><td class="fw-bold">36 分</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-7">
+                                    <p class="mb-2" style="font-size:0.95rem;"><strong>雇主品質評分</strong></p>
+                                    <table class="table compact-table table-bordered mb-0">
+                                        <thead><tr><th>類型</th><th>評分</th><th>乘數</th></tr></thead>
+                                        <tbody>
+                                            <tr class="table-success"><td>大型科技業</td><td>95 分</td><td>&times;1.10</td></tr>
+                                            <tr><td>中型製造業</td><td>80 分</td><td>&times;1.00</td></tr>
+                                            <tr class="table-warning"><td>家庭看護</td><td>75 分</td><td>&times;0.90</td></tr>
+                                            <tr class="table-danger"><td>不穩定雇主</td><td>55 分</td><td>&times;0.75</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 信用卡 (綠色區塊) - 水平 -->
+                        <div class="border rounded-4 p-4" style="background: #f0faf4; border-color: #28a745 !important;">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge px-3 py-2 me-2" style="font-size:0.95rem; background: linear-gradient(135deg, #28a745, #20c997); color: white;"><i class="bi bi-credit-card me-1"></i>信用卡</span>
+                                <span class="text-muted" style="font-size:0.9rem;">合約長度 + 雇主品質</span>
+                            </div>
+                            <div class="row g-3">
+                                <div class="col-md-5">
+                                    <p class="mb-2" style="font-size:0.95rem;"><strong>合約長度評分</strong>（著重 LTV 長期價值）</p>
+                                    <table class="table compact-table table-bordered mb-0">
+                                        <thead><tr><th>合約剩餘</th><th>分數</th><th>說明</th></tr></thead>
+                                        <tbody>
+                                            <tr class="table-success"><td>> 24 個月</td><td class="fw-bold">100 分</td><td>高 LTV</td></tr>
+                                            <tr><td>12-24 個月</td><td class="fw-bold">70 分</td><td>中等 LTV</td></tr>
+                                            <tr class="table-warning"><td>< 12 個月</td><td class="fw-bold">40 分</td><td>低 LTV</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="col-md-7">
+                                    <p class="mb-2" style="font-size:0.95rem;"><strong>雇主品質評分</strong></p>
+                                    <table class="table compact-table table-bordered mb-0">
+                                        <thead><tr><th>類型</th><th>評分</th></tr></thead>
+                                        <tbody>
+                                            <tr class="table-success"><td>上市櫃科技業</td><td class="fw-bold">95 分</td></tr>
+                                            <tr><td>一般製造業</td><td class="fw-bold">80 分</td></tr>
+                                            <tr class="table-warning"><td>其他 / 家事移工</td><td class="fw-bold">70 分</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 維度三：還款意願 ==================== -->
+            <div class="dim-card">
+                <div class="dim-header" data-bs-toggle="collapse" data-bs-target="#dim3" aria-expanded="false">
+                    <div class="dim-icon" style="background: linear-gradient(135deg, #ffc107, #ffda6a);"><i class="bi bi-heart-pulse"></i></div>
+                    <div class="dim-info">
+                        <h6>維度三：還款意願</h6>
+                        <small>利用跨境匯款行為作為「誠信」的替代數據</small>
+                    </div>
+                    <div class="dim-weights">
+                        <span class="w-tag" style="background:#fff8e1;color:#f57f17;">信貸 20%</span>
+                        <span class="w-tag" style="background:#fff8e1;color:#f57f17;">信用卡 30%</span>
+                    </div>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </div>
+                <div id="dim3" class="collapse" data-bs-parent="#dimAccordion">
+                    <div class="dim-body">
+                        <div class="formula-box mb-4"><strong style="font-size:1.05rem;">還款意願 = 匯款規律性(%) &times; 0.9 - 風險調整 &times; 0.5</strong></div>
+
+                        <!-- ===== A. 匯款規律性 ===== -->
+                        <div class="border rounded-4 p-4 mb-4" style="background: #fffdf5; border-color: #ffc107 !important;">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge px-3 py-2 me-2" style="font-size:0.95rem; background: linear-gradient(135deg, #ffc107, #ffda6a); color: #333;"><i class="bi bi-send me-1"></i>匯款規律性</span>
+                                <span class="text-muted" style="font-size:0.9rem;">跨境匯款行為分析 — 資料模擬、統計指標、評分模型</span>
+                            </div>
+
+                            <!-- 1. 資料生成機制 -->
+                            <h6 class="fw-bold mb-2" style="font-size:1.05rem;"><i class="fas fa-database me-1 text-warning"></i>資料生成機制 (Simulation)</h6>
+                            <p style="font-size:0.95rem;" class="mb-3">系統在前端隨機生成 5~12 筆歷史匯款紀錄，並隨機觸發情境（一般定期匯款 / 家中急用大額匯款）。</p>
+
+                            <!-- 2. 核心統計指標 + 3. 公式與模型 (並排) -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-7">
+                                    <h6 class="fw-bold mb-2" style="font-size:1.05rem;"><i class="fas fa-chart-bar me-1 text-warning"></i>核心統計指標 (Metrics)</h6>
+                                    <div class="row g-2">
+                                        <div class="col-4">
+                                            <div class="bg-white p-2 rounded text-center h-100 border">
+                                                <div class="fw-bold" style="font-size:1.05rem;">CV</div>
+                                                <div style="font-size:0.88rem;">變異係數 (波動率)</div>
+                                                <div class="text-muted" style="font-size:0.82rem;">金額標準差 &divide; 平均金額</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="bg-white p-2 rounded text-center h-100 border">
+                                                <div class="fw-bold" style="font-size:1.05rem;">Entropy</div>
+                                                <div style="font-size:0.88rem;">行為熵 (可預測性)</div>
+                                                <div class="text-muted" style="font-size:0.82rem;">匯款間隔的規律程度</div>
+                                            </div>
+                                        </div>
+                                        <div class="col-4">
+                                            <div class="bg-white p-2 rounded text-center h-100 border">
+                                                <div class="fw-bold" style="font-size:1.05rem;">Z-Score</div>
+                                                <div style="font-size:0.88rem;">異常值檢測</div>
+                                                <div class="text-muted" style="font-size:0.82rem;">偵測突發大額轉帳</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-5 d-flex flex-column">
+                                    <h6 class="fw-bold mb-2" style="font-size:1.05rem;"><i class="fas fa-function me-1 text-warning"></i>公式與模型</h6>
+                                    <div class="formula-box mb-0 flex-fill d-flex align-items-center">
+                                        <strong style="font-size:1.1rem;">Score = 100 - (CV &times; W<sub>amt</sub>)</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row g-0">
+                                <!-- 一般模式 -->
+                                <div class="col-md-6 dim-divider pe-3">
+                                    <div class="border rounded overflow-hidden h-100">
+                                        <div class="p-2 text-white text-center fw-bold" style="background:linear-gradient(135deg, #0d6efd, #6ea8fe); font-size:0.95rem;">
+                                            <i class="bi bi-check-circle me-1"></i>一般模式 — 規律匯款
+                                        </div>
+                                        <div class="p-3">
+                                            <p class="mb-2" style="font-size:0.95rem;">金額平穩 (10k &plusmn; 3k)，波動極小 (CV = 0.05)</p>
+                                            <div class="d-flex gap-3">
+                                                <div class="border rounded p-2 text-center bg-light d-flex flex-column align-items-center justify-content-center" style="min-width:90px;">
+                                                    <div class="text-muted" style="font-size:0.82rem;">金額權重 W<sub>amt</sub></div>
+                                                    <div class="fw-bold" style="font-size:1.1rem;">50</div>
+                                                </div>
+                                                <div class="p-2 rounded flex-fill" style="background:#e3f2fd; font-size:0.95rem;">
+                                                    <i class="bi bi-person me-1"></i><strong>範例：</strong>每月固定匯款 1 萬<br>
+                                                    <span class="fw-bold text-primary" style="font-size:1.05rem;">Score = 100 - (0.05 &times; 50) = <span style="font-size:1.2rem;">97.5 分</span></span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- 急用模式 -->
+                                <div class="col-md-6 ps-3">
+                                    <div class="border rounded overflow-hidden h-100">
+                                        <div class="p-2 text-white text-center fw-bold" style="background:linear-gradient(135deg, #dc3545, #ea868f); font-size:0.95rem;">
+                                            <i class="bi bi-exclamation-circle me-1"></i>急用模式 — 突發大額
+                                        </div>
+                                        <div class="p-3">
+                                            <p class="mb-2" style="font-size:0.95rem;">突發大額 (55k+)，波動劇烈 (CV = 0.8)</p>
+                                            <div class="d-flex gap-3">
+                                                <div class="border rounded p-2 text-center bg-light d-flex flex-column align-items-center justify-content-center" style="min-width:90px;">
+                                                    <div class="text-muted" style="font-size:0.82rem;">金額權重 W<sub>amt</sub></div>
+                                                    <div class="fw-bold" style="font-size:1.1rem;">10</div>
+                                                </div>
+                                                <div class="p-2 rounded flex-fill" style="background:#ffebee; font-size:0.95rem;">
+                                                    <i class="bi bi-person me-1"></i><strong>範例：</strong>平常 1 萬，突然一筆 5.5 萬<br>
+                                                    <span class="fw-bold text-danger" style="font-size:1.05rem;">Score = 100 - (0.8 &times; 10) = <span style="font-size:1.2rem;">92 分</span></span><br>
+                                                    <span class="text-success" style="font-size:0.93rem;"><i class="bi bi-shield-check me-1"></i>動態豁免：偵測到急用情境，降低金額權重</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ===== B. 風險調整 ===== -->
+                        <div class="border rounded-4 p-4" style="background: #fff5f5; border-color: #dc3545 !important;">
+                            <div class="d-flex align-items-center mb-3">
+                                <span class="badge px-3 py-2 me-2" style="font-size:0.95rem; background: linear-gradient(135deg, #dc3545, #ea868f); color: white;"><i class="bi bi-exclamation-triangle me-1"></i>風險調整</span>
+                                <span class="text-muted" style="font-size:0.9rem;">扣分因子 — 偵測到以下風險信號時，從規律性分數中扣除</span>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-md-3"><div class="d-flex align-items-center border rounded p-2 bg-white"><span class="badge bg-danger me-2" style="font-size:0.85rem;">-20</span><span style="font-size:0.93rem;">曾有無薪假記錄</span></div></div>
+                                <div class="col-md-3"><div class="d-flex align-items-center border rounded p-2 bg-white"><span class="badge bg-warning text-dark me-2" style="font-size:0.85rem;">-15</span><span style="font-size:0.93rem;">加班時數不穩定</span></div></div>
+                                <div class="col-md-3"><div class="d-flex align-items-center border rounded p-2 bg-white"><span class="badge bg-danger me-2" style="font-size:0.85rem;">-25</span><span style="font-size:0.93rem;">AI 語音測謊異常</span></div></div>
+                                <div class="col-md-3"><div class="d-flex align-items-center border rounded p-2 bg-white"><span class="badge bg-warning text-dark me-2" style="font-size:0.85rem;">-10</span><span style="font-size:0.93rem;">母國匯率波動大</span></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== 維度四：外部環境風險 ==================== -->
+            <div class="dim-card">
+                <div class="dim-header" data-bs-toggle="collapse" data-bs-target="#dim4" aria-expanded="false">
+                    <div class="dim-icon" style="background: linear-gradient(135deg, #dc3545, #ea868f);"><i class="bi bi-globe"></i></div>
+                    <div class="dim-info">
+                        <h6>維度四：外部環境風險</h6>
+                        <small>總體經濟、產業循環、國籍宏觀風險等不可控因素</small>
+                    </div>
+                    <div class="dim-weights">
+                        <span class="w-tag" style="background:#ffebee;color:#c62828;">信貸 10%</span>
+                        <span class="w-tag" style="background:#ffebee;color:#c62828;">信用卡 20%</span>
+                    </div>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </div>
+                <div id="dim4" class="collapse" data-bs-parent="#dimAccordion">
+                    <div class="dim-body">
+                        <div class="formula-box mb-3">
+                            <strong style="font-size:1.05rem;">外部風險 = 基準分(80) + 產業係數 - 國籍風險扣分 - 匯率加權</strong><br>
+                            <span class="text-muted" style="font-size:0.95rem;">*國籍評分依據「貨幣波動率」與「歷史違約係數」，非針對個人特徵</span>
+                        </div>
+                        <div class="row g-4">
+                            <!-- 國籍宏觀風險矩陣 -->
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-2" style="font-size:1.05rem;"><i class="bi bi-flag me-1"></i>國籍宏觀風險矩陣</h6>
+                                <table class="table compact-table table-bordered mb-3">
+                                    <thead><tr><th>國籍 (地區)</th><th>經濟穩定度</th><th>信貸扣分</th><th>信用卡扣分</th></tr></thead>
+                                    <tbody>
+                                        <tr><td style="font-size:1rem;">&#127483;&#127475; 越南</td><td class="text-danger fw-bold">高度波動</td><td class="text-danger fw-bold">-15</td><td class="text-danger fw-bold">-18</td></tr>
+                                        <tr><td style="font-size:1rem;">&#127470;&#127465; 印尼</td><td class="text-warning fw-bold">中度波動</td><td class="text-danger">-10</td><td class="text-danger">-12</td></tr>
+                                        <tr><td style="font-size:1rem;">&#127477;&#127469; 菲 / &#127481;&#127469; 泰</td><td class="text-success fw-bold">相對穩定</td><td>-5</td><td>-6</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- 風險對照邏輯圖 -->
+                            <div class="col-md-6">
+                                <h6 class="fw-bold mb-2" style="font-size:1.05rem;"><i class="bi bi-diagram-3 me-1"></i>風險對照邏輯圖</h6>
+                                <div class="d-flex align-items-stretch gap-0 flex-wrap">
+                                    <div class="risk-flow-card" style="border-top:3px solid #28a745;">
+                                        <div class="risk-label text-success">安穩</div>
+                                        <div class="risk-score text-success">100</div>
+                                        <div class="risk-desc">Tier 1 產業</div>
+                                    </div>
+                                    <div class="risk-flow-arrow"><i class="bi bi-chevron-right"></i></div>
+                                    <div class="risk-flow-card" style="border-top:3px solid #0d6efd;">
+                                        <div class="risk-label text-primary">標準</div>
+                                        <div class="risk-score text-primary">80</div>
+                                        <div class="risk-desc">一般情況</div>
+                                    </div>
+                                    <div class="risk-flow-arrow"><i class="bi bi-chevron-right"></i></div>
+                                    <div class="risk-flow-card" style="border-top:3px solid #ffc107;">
+                                        <div class="risk-label text-warning">波動</div>
+                                        <div class="risk-score text-warning">70</div>
+                                        <div class="risk-desc">匯率貶值</div>
+                                    </div>
+                                    <div class="risk-flow-arrow"><i class="bi bi-chevron-right"></i></div>
+                                    <div class="risk-flow-card" style="border-top:3px solid #dc3545;">
+                                        <div class="risk-label text-danger">危機</div>
+                                        <div class="risk-score text-danger">40</div>
+                                        <div class="risk-desc">無薪假+通膨</div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-danger py-2 mt-3 mb-0" style="font-size:0.93rem;">
+                                    <i class="bi bi-shield-exclamation me-1"></i>當外部風險過高時，系統將自動限縮貸款額度上限 (Cap Limit)。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div><!-- /accordion -->
+
+        <!-- ==================== 3. 加權合成 ==================== -->
+        <div class="section-title mt-4" id="sec-weight"><i class="bi bi-sliders"></i>3. 加權合成：雙軌權重對比</div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-6">
+                <div class="weight-compare bg-white p-4 h-100">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-primary fs-6 px-3 py-2 me-2"><i class="bi bi-cash-coin me-1"></i>信貸模型</span>
+                        <span class="text-muted" style="font-size:0.95rem;">看重「還得起」</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #28a745, #20c997);"><i class="bi bi-calculator me-1"></i>償債能力 40%</span>
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #0d6efd, #6ea8fe);"><i class="bi bi-graph-up me-1"></i>收入穩定度 30%</span>
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #ffc107, #ffda6a); color: #333;"><i class="bi bi-heart-pulse me-1"></i>還款意願 20%</span>
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #dc3545, #ea868f);"><i class="bi bi-globe me-1"></i>外部風險 10%</span>
+                    </div>
+                    <div class="mt-3 p-2 rounded" style="background:#f0f4ff; font-size:0.9rem;">
+                        <i class="bi bi-info-circle text-primary me-1"></i>信貸風險核心在於「償債能力」，因此給予最高權重 40%，確保借款人有足夠收入覆蓋月付金。
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="weight-compare bg-white p-4 h-100">
+                    <div class="d-flex align-items-center mb-3">
+                        <span class="badge bg-success fs-6 px-3 py-2 me-2"><i class="bi bi-credit-card me-1"></i>信用卡模型</span>
+                        <span class="text-muted" style="font-size:0.95rem;">看重「願意還」與「不會跑」</span>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #28a745, #20c997);"><i class="bi bi-calculator me-1"></i>償債能力 20%</span>
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #0d6efd, #6ea8fe);"><i class="bi bi-graph-up me-1"></i>收入穩定度 30%</span>
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #ffc107, #ffda6a); color: #333;"><i class="bi bi-heart-pulse me-1"></i>還款意願 30%</span>
+                        <span class="badge rounded-pill px-3 py-2" style="font-size: 0.9rem; background: linear-gradient(135deg, #dc3545, #ea868f);"><i class="bi bi-globe me-1"></i>外部風險 20%</span>
+                    </div>
+                    <div class="mt-3 p-2 rounded" style="background:#fff8e1; font-size:0.9rem;">
+                        <i class="bi bi-info-circle text-warning me-1"></i>信用卡風險在於「意願」與「跑路 (無擔保授信的逃逸風險更高)」。因此大幅提升了還款意願 (30%) 與外部風險 (20%) 的比重。
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 核貸/核卡政策 ==================== -->
+        <div class="section-title mt-5" id="sec-score"><i class="bi bi-shield-check"></i>4. H-CAP Score</div>
+
+        <div class="row g-4 mb-5">
+            <!-- 信貸 -->
+            <div class="col-md-6">
+                <div class="bg-white rounded-4 p-4 shadow-sm h-100">
+                    <h6 class="fw-bold mb-3" style="font-size:1.15rem;"><span class="badge bg-primary fs-6 me-2">信貸</span>核貸額度對照</h6>
+                    <div class="policy-table">
+                        <div class="policy-header">
+                            <div>H-CAP Score</div>
+                            <div>風險等級</div>
+                            <div>核貸政策 <span style="font-weight:400; opacity:0.8;">(金管會 DBR 22倍上限)</span></div>
+                        </div>
+                        <div class="score-tier" style="background:#e3f2fd;">
+                            <div class="tier-range text-primary">750+</div>
+                            <div class="tier-level"><span class="badge bg-primary px-2 py-1">低風險 </span></div>
+                            <div class="tier-policy"><strong class="text-primary">月薪 15-18 倍額度</strong><br><span class="text-muted" style="font-size:0.93rem;">優惠利率，快速核貸</span></div>
+                        </div>
+                        <div class="score-tier" style="background:#e8f5e9;">
+                            <div class="tier-range text-success">700+</div>
+                            <div class="tier-level"><span class="badge bg-success px-2 py-1">中低風險 </span></div>
+                            <div class="tier-policy"><strong class="text-success">月薪 12-15 倍額度</strong><br><span class="text-muted" style="font-size:0.93rem;">正常利率，標準審核</span></div>
+                        </div>
+                        <div class="score-tier" style="background:#fff8e1;">
+                            <div class="tier-range text-warning">650+</div>
+                            <div class="tier-level"><span class="badge bg-warning text-dark px-2 py-1">中高風險 </span></div>
+                            <div class="tier-policy"><strong style="color:#e6a200;">月薪 8-10 倍</strong><br><span class="text-muted" style="font-size:0.93rem;">需加強照會，限額核准</span></div>
+                        </div>
+                        <div class="score-tier" style="background:#ffebee;">
+                            <div class="tier-range text-danger">&lt;650</div>
+                            <div class="tier-level"><span class="badge bg-danger px-2 py-1">高風險 </span></div>
+                            <div class="tier-policy"><strong class="text-danger">不予核貸</strong><br><span class="text-muted" style="font-size:0.93rem;">建議婉拒或要求保證人</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 信用卡 -->
+            <div class="col-md-6">
+                <div class="bg-white rounded-4 p-4 shadow-sm h-100">
+                    <h6 class="fw-bold mb-3" style="font-size:1.15rem;"><span class="badge bg-success fs-6 me-2">信用卡</span>核卡額度對照</h6>
+                    <div class="policy-table">
+                        <div class="policy-header">
+                            <div>H-CAP Score</div>
+                            <div>風險等級</div>
+                            <div>核卡政策</div>
+                        </div>
+                        <div class="score-tier" style="background:#e3f2fd;">
+                            <div class="tier-range text-primary">750+</div>
+                            <div class="tier-level"><span class="badge bg-primary px-2 py-1">低風險 </span></div>
+                            <div class="tier-policy"><strong class="text-primary">月薪 1.5-2 倍 (上限5萬)</strong><br><span class="text-muted" style="font-size:0.93rem;">無限制，開啟預借現金</span></div>
+                        </div>
+                        <div class="score-tier" style="background:#e8f5e9;">
+                            <div class="tier-range text-success">700+</div>
+                            <div class="tier-level"><span class="badge bg-success px-2 py-1">中低風險 </span></div>
+                            <div class="tier-policy"><strong class="text-success">月薪 1 倍</strong><br><span class="text-muted" style="font-size:0.93rem;">標準功能</span></div>
+                        </div>
+                        <div class="score-tier" style="background:#fff8e1;">
+                            <div class="tier-range text-warning">650+</div>
+                            <div class="tier-level"><span class="badge bg-warning text-dark px-2 py-1">中高風險 </span></div>
+                            <div class="tier-policy"><strong style="color:#e6a200;">月薪 0.5 倍</strong><br><span class="text-muted" style="font-size:0.93rem;">關閉預借現金，需綁定自動扣繳</span></div>
+                        </div>
+                        <div class="score-tier" style="background:#ffebee;">
+                            <div class="tier-range text-danger">&lt;650</div>
+                            <div class="tier-level"><span class="badge bg-danger px-2 py-1">高風險 </span></div>
+                            <div class="tier-policy"><strong class="text-danger">不予核卡</strong><br><span class="text-muted" style="font-size:0.93rem;">建議先申請 ISA 累積信用</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 範例試算 (Accordion) ==================== -->
+        <div class="section-title"><i class="bi bi-lightning"></i>實際案例試算（點擊展開）</div>
+
+        <div class="accordion mb-5" id="caseAccordion">
+            <!-- 信貸模型試算 -->
+            <div class="dim-card">
+                <div class="dim-header" data-bs-toggle="collapse" data-bs-target="#caseLoan" aria-expanded="false">
+                    <div class="dim-icon" style="background: linear-gradient(135deg, #0d6efd, #6ea8fe);"><i class="bi bi-cash-coin"></i></div>
+                    <div class="dim-info">
+                        <h6>信貸模型試算</h6>
+                        <small>越南籍 | 中型製造業 | 月薪 NT$30,000 | 合約24月 | 匯款85% | <span class="text-danger fw-bold">有無薪假</span></small>
+                    </div>
+                    <div class="dim-weights">
+                        <span class="w-tag" style="background:#e3f2fd;color:#1565c0;">H-CAP 687</span>
+                        <span class="w-tag" style="background:#fff8e1;color:#e6a200;">中低風險</span>
+                    </div>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </div>
+                <div id="caseLoan" class="collapse" data-bs-parent="#caseAccordion">
+                    <div class="dim-body">
+                        <div class="calc-flow mb-3">
+                            <div class="calc-step" style="border-top: 3px solid #28a745;">
+                                <div class="step-label text-success">償債能力 (40%)</div>
+                                <div class="step-value text-success">95</div>
+                                <span class="text-muted" style="font-size:0.9rem;">風險調整月薪 $26,250<br>DBR 安全範圍內</span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-plus-lg"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #0d6efd;">
+                                <div class="step-label text-primary">收入穩定度 (30%)</div>
+                                <div class="step-value text-primary">76.8</div>
+                                <span class="text-muted" style="font-size:0.9rem;">合約72 &times; 0.4 + 雇主80 &times; 0.6</span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-plus-lg"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #ffc107;">
+                                <div class="step-label text-warning">還款意願 (20%)</div>
+                                <div class="step-value" style="color:#e6a200;">66.5</div>
+                                <span class="text-muted" style="font-size:0.9rem;">85 &times; 0.9 - 無薪假20 &times; 0.5</span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-plus-lg"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #dc3545;">
+                                <div class="step-label text-danger">外部風險 (10%)</div>
+                                <div class="step-value text-danger">65</div>
+                                <span class="text-muted" style="font-size:0.9rem;">基準80 - 越南15</span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-arrow-right"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #1e293b; background: #1e293b; color: white;">
+                                <div class="step-label" style="color: rgba(255,255,255,0.7);">H-CAP Score</div>
+                                <div class="step-value">687</div>
+                                <span style="color: rgba(255,255,255,0.6); font-size:0.9rem;">80.84 &times; 8.5</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background: #f0f4ff;">
+                            <span class="badge bg-warning text-dark fs-6 px-3 py-2">中低風險</span>
+                            <div style="font-size:0.95rem;">
+                                <strong>限額核准</strong> — 建議額度 NT$ 30,000
+                                <span class="text-muted d-block" style="font-size:0.9rem;">無薪假觸發收入折減模型：前3月正常薪 + 後3月僅領底薪 &rarr; 平均 $26,250</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 信用卡模型試算 -->
+            <div class="dim-card">
+                <div class="dim-header" data-bs-toggle="collapse" data-bs-target="#caseCard" aria-expanded="false">
+                    <div class="dim-icon" style="background: linear-gradient(135deg, #28a745, #20c997);"><i class="bi bi-credit-card"></i></div>
+                    <div class="dim-info">
+                        <h6>信用卡模型試算</h6>
+                        <small>同一位申請人，切換至信用卡權重計算</small>
+                    </div>
+                    <div class="dim-weights">
+                        <span class="w-tag" style="background:#e8f5e9;color:#2e7d32;">H-CAP 679</span>
+                        <span class="w-tag" style="background:#fff8e1;color:#e6a200;">觀察期核准</span>
+                    </div>
+                    <i class="bi bi-chevron-down chevron"></i>
+                </div>
+                <div id="caseCard" class="collapse" data-bs-parent="#caseAccordion">
+                    <div class="dim-body">
+                        <div class="calc-flow mb-3">
+                            <div class="calc-step" style="border-top: 3px solid #28a745;">
+                                <div class="step-label text-success">償債能力 (20%)</div>
+                                <div class="step-value text-success">95</div>
+                                <span class="text-muted" style="font-size:0.9rem;">Card DBR 極低<br>權重降低</span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-plus-lg"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #0d6efd;">
+                                <div class="step-label text-primary">收入穩定度 (30%)</div>
+                                <div class="step-value text-primary">76.8</div>
+                                <span class="text-muted" style="font-size:0.9rem;">計算邏輯相同</span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-plus-lg"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #ffc107;">
+                                <div class="step-label text-warning">還款意願 (30%)</div>
+                                <div class="step-value" style="color:#e6a200;">85</div>
+                                <span class="text-muted" style="font-size:0.9rem;">匯款規律 85%<br><strong class="text-success">權重提升</strong></span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-plus-lg"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #dc3545;">
+                                <div class="step-label text-danger">外部風險 (20%)</div>
+                                <div class="step-value text-danger">62</div>
+                                <span class="text-muted" style="font-size:0.9rem;">基準80 - 越南18<br><strong class="text-danger">權重加重</strong></span>
+                            </div>
+                            <div class="calc-arrow"><i class="bi bi-arrow-right"></i></div>
+                            <div class="calc-step" style="border-top: 3px solid #1e293b; background: #1e293b; color: white;">
+                                <div class="step-label" style="color: rgba(255,255,255,0.7);">H-CAP Score</div>
+                                <div class="step-value">679</div>
+                                <span style="color: rgba(255,255,255,0.6); font-size:0.9rem;">79.94 &times; 8.5</span>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center gap-3 p-3 rounded-3" style="background: #f0fff4;">
+                            <span class="badge bg-warning text-dark fs-6 px-3 py-2">觀察期核准</span>
+                            <div style="font-size:0.95rem;">
+                                <strong>發給 NT$ 15,000</strong> (月薪0.5倍)
+                                <span class="text-muted d-block" style="font-size:0.9rem;">附加條件：綁定薪資帳戶自動扣繳以降低風險</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 名詞解釋 ==================== -->
+        <div class="section-title"><i class="bi bi-book"></i>關鍵名詞速查</div>
+        <div class="row g-3 mb-5">
+            <div class="col-md-4">
+                <div class="bg-white rounded-3 p-3 shadow-sm h-100">
+                    <h6 class="fw-bold text-primary mb-1" style="font-size:1.05rem;">DBR</h6>
+                    <p class="mb-0" style="font-size:0.95rem;">Debt Burden Ratio — 債務所得比。月付金佔月薪的比例，金管會規定無擔保債務不得超過 22 倍月薪。</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="bg-white rounded-3 p-3 shadow-sm h-100">
+                    <h6 class="fw-bold text-primary mb-1" style="font-size:1.05rem;">LTV</h6>
+                    <p class="mb-0" style="font-size:0.95rem;">Life Time Value — 客戶生命週期價值。合約越長、持卡時間越久，銀行預期收益越高。</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="bg-white rounded-3 p-3 shadow-sm h-100">
+                    <h6 class="fw-bold text-primary mb-1" style="font-size:1.05rem;">Run-away Risk</h6>
+                    <p class="mb-0" style="font-size:0.95rem;">逃逸風險 — 移工刷爆信用卡後離境不歸。信用卡模型最重視的外部風險指標。</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,390 @@
+<!-- 客戶信用畫像核心內容 -->
+<!-- 切換按鈕 -->
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-center">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-lg px-4 active" id="btnScoreBreakdown" onclick="toggleDashboardSection('scoreBreakdown')">
+                <i class="bi bi-clipboard-data me-2"></i>信用評估總覽
+            </button>
+            <button type="button" class="btn btn-outline-info btn-lg px-4" id="btnDataMatrix" onclick="toggleDashboardSection('dataMatrix')">
+                <i class="bi bi-diagram-3 me-2"></i>三維數據矩陣
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 信用評估總覽區塊 -->
+<div id="scoreBreakdownSection">
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card shadow-sm hcap-card h-100">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-clipboard-data"></i> 信用評估總覽
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <!-- 左側：評分維度 (2x2 grid) -->
+                    <div class="col-md-7">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2"></i>評分維度</h6>
+                        <div class="row g-3">
+                        {% for key, item in active_breakdown.items() %}
+                        <div class="col-6">
+                            <div class="score-item p-2 rounded border
+                                {% if key == 'repayment_capacity' %}score-repayment
+                                {% elif key == 'income_stability' %}score-stability
+                                {% elif key == 'repayment_willingness' %}score-willingness
+                                {% else %}score-external{% endif %}" style="height:100%;">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <span class="fw-bold">
+                                        {% if key == 'repayment_capacity' %}
+                                            <i class="bi bi-calculator text-success"></i> 償債能力
+                                        {% elif key == 'income_stability' %}
+                                            <i class="bi bi-graph-up text-primary"></i> 收入穩定度
+                                        {% elif key == 'repayment_willingness' %}
+                                            <i class="bi bi-heart-pulse text-warning"></i> 還款意願
+                                        {% else %}
+                                            <i class="bi bi-globe text-danger"></i> 外部風險
+                                        {% endif %}
+                                        <span class="text-muted" style="font-size:0.78rem;">({{ item.weight }}%)</span>
+                                    </span>
+                                    <span class="fw-bold" style="font-size:1.15rem;">{{ item.score }}/100</span>
+                                </div>
+                                <div class="progress" style="height: 10px;">
+                                    <div class="progress-bar
+                                        {% if key == 'repayment_capacity' %}bg-success
+                                        {% elif key == 'income_stability' %}bg-primary
+                                        {% elif key == 'repayment_willingness' %}bg-warning
+                                        {% else %}bg-danger{% endif %}"
+                                        style="width: {{ item.score }}%">
+                                    </div>
+                                </div>
+                                <div class="text-muted mt-1" style="font-size:0.88rem;">
+                                    {% if key == 'repayment_capacity' %}
+                                        計算依據：債務所得比(DBR)分析
+                                    {% elif key == 'income_stability' %}
+                                        合約穩定性 + 雇主品質
+                                    {% elif key == 'repayment_willingness' %}
+                                        匯款規律性 + 行為數據
+                                    {% else %}
+                                        匯率風險 + 政經環境
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- 右側：核准建議（依模型切換）-->
+                    <div class="col-md-5">
+                        {% if model == 'card' %}
+                        <!-- ===== 信用卡模型 ===== -->
+                        <h6 class="fw-bold mb-2"><i class="bi bi-credit-card me-1"></i>信用卡核准建議</h6>
+                        {% set cs = active_score %}
+                        {% if cs >= 750 %}
+                            {% set card_ok = true %}{% set card_limit = 30000 %}
+                            {% set card_fee = 0 %}{% set card_cashback = '2%' %}
+                        {% elif cs >= 700 %}
+                            {% set card_ok = true %}{% set card_limit = 20000 %}
+                            {% set card_fee = 0 %}{% set card_cashback = '1.5%' %}
+                        {% elif cs >= 650 %}
+                            {% set card_ok = true %}{% set card_limit = 15000 %}
+                            {% set card_fee = 500 %}{% set card_cashback = '1%' %}
+                        {% else %}
+                            {% set card_ok = false %}{% set card_limit = 0 %}
+                            {% set card_fee = 0 %}{% set card_cashback = '--' %}
+                        {% endif %}
+
+                        {% if card_ok %}
+                        <div class="p-2 rounded border border-success mb-2" style="border-left: 4px solid #198754 !important;">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="fw-bold"><i class="bi bi-check-circle-fill text-success me-1"></i>核准發卡</span>
+                                <div class="text-end">
+                                    <div class="fw-bold text-success" style="font-size:1.5rem; line-height:1.1;">NT$ {{ card_limit | intcomma }}</div>
+                                    <div class="text-muted" style="font-size:0.88rem;">核准信用額度</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <div class="flex-fill text-center rounded py-2" style="background:#e8f5e9;">
+                                    <div class="text-muted" style="font-size:0.78rem;">年費</div>
+                                    <div class="fw-bold text-success" style="font-size:1.15rem;">{% if card_fee == 0 %}免費{% else %}NT${{ card_fee }}{% endif %}</div>
+                                </div>
+                                <div class="flex-fill text-center rounded py-2" style="background:#e3f2fd;">
+                                    <div class="text-muted" style="font-size:0.78rem;">現金回饋</div>
+                                    <div class="fw-bold" style="font-size:1.15rem; color:#1565c0;">{{ card_cashback }}</div>
+                                </div>
+                                <div class="flex-fill text-center rounded py-2" style="background:#fff3e0;">
+                                    <div class="text-muted" style="font-size:0.78rem;">跨境手續費</div>
+                                    <div class="fw-bold" style="font-size:1.15rem; color:#e65100;">1.5%</div>
+                                </div>
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="p-2 rounded border border-danger mb-2" style="border-left: 4px solid #dc3545 !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold small"><i class="bi bi-x-circle-fill text-danger me-1"></i>暫不符合發卡條件</span>
+                                <span class="badge bg-danger">{{ cs }} 分</span>
+                            </div>
+                            <small class="text-muted">未達最低門檻（650 分），建議提升匯款規律性與合約剩餘期限</small>
+                        </div>
+                        {% endif %}
+
+                        {% else %}
+                        <!-- ===== 信貸模型 ===== -->
+                        <h6 class="fw-bold mb-2"><i class="bi bi-check-circle me-1"></i>核貸建議</h6>
+
+                        {% set sl = client.loan_recommendation.survival_loan %}
+                        {% if sl.approved %}
+                        {% if sl.term and sl.interest_rate %}{% set r = sl.interest_rate / 1200 %}{% set monthly = (sl.max_amount * r / (1 - (1 + r) ** (-sl.term))) | int %}{% endif %}
+                        <div class="p-2 rounded border border-success mb-2" style="border-left: 4px solid #198754 !important;">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="fw-bold"><i class="bi bi-check-circle-fill text-success me-1"></i>核准放貸</span>
+                                <div class="text-end">
+                                    <div class="fw-bold text-success" style="font-size:1.5rem; line-height:1.1;">NT$ {{ sl.max_amount | intcomma }}</div>
+                                    <div class="text-muted" style="font-size:0.88rem;">核准貸款額度</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-1">
+                                <div class="flex-fill text-center rounded py-2" style="background:#e8f5e9;">
+                                    <div class="text-muted" style="font-size:0.78rem;">年利率</div>
+                                    <div class="fw-bold text-success" style="font-size:1.15rem;">{{ sl.interest_rate }}%</div>
+                                </div>
+                                <div class="flex-fill text-center rounded py-2" style="background:#e3f2fd;">
+                                    <div class="text-muted" style="font-size:0.78rem;">貸款期限</div>
+                                    <div class="fw-bold" style="font-size:1.15rem; color:#1565c0;">{{ sl.term }} 個月</div>
+                                </div>
+                                {% if monthly is defined %}
+                                <div class="flex-fill text-center rounded py-2" style="background:#fff3e0;">
+                                    <div class="text-muted" style="font-size:0.78rem;">每月還款</div>
+                                    <div class="fw-bold" style="font-size:1.15rem; color:#e65100;">NT$ {{ monthly | intcomma }}</div>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% else %}
+                        <div class="p-2 rounded border border-danger mb-2" style="border-left: 4px solid #dc3545 !important;">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <span class="fw-bold small"><i class="bi bi-x-circle-fill text-danger me-1"></i>暫緩核貸</span>
+                                <span class="badge bg-danger">{{ active_score }} 分</span>
+                            </div>
+                            <small class="text-muted">{{ sl.reason if sl.reason else '風險評估未通過，請提升信用評分後再申請' }}</small>
+                        </div>
+                        {% endif %}
+                        {% endif %}
+
+                        <!-- 風險因子（兩模型共用）-->
+                        {% if client.risk_factors and client.risk_factors|length > 0 %}
+                        <div class="p-2 rounded border" style="border-left: 4px solid #dc3545 !important;">
+                            <div class="d-flex align-items-center mb-1">
+                                <i class="bi bi-exclamation-triangle-fill text-danger me-1"></i>
+                                <span class="fw-bold text-danger">風險因子</span>
+                            </div>
+                            <ul class="list-unstyled mb-0">
+                                {% for risk in client.risk_factors %}
+                                <li class="text-muted"><i class="bi bi-dot text-danger"></i>{{ risk }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- 三維數據矩陣區塊 -->
+<div id="dataMatrixSection" style="display: none;">
+<div class="row g-4">
+    <div class="col-12">
+        <div class="card shadow-sm hcap-card h-100">
+            <div class="card-header bg-primary text-white">
+                <i class="bi bi-diagram-3"></i> 三維數據矩陣
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <!-- 維度一：薪資數據 -->
+                    <div class="col-md-6">
+                        <h6><i class="bi bi-cash-coin text-success"></i> 維度一：B2B薪資與合約</h6>
+                    <div class="chart-container" style="height: 180px;">
+                        <canvas id="salaryChart"></canvas>
+                    </div>
+                    <div class="row mt-2 g-2">
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body p-2 text-center">
+                                    <small class="text-muted">經常性薪資</small>
+                                    <p class="mb-0 fw-bold small">NT$ {{ (client.salary_data.base_salary | average) | intcomma }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card bg-light">
+                                <div class="card-body p-2 text-center">
+                                    <small class="text-muted">收入穩定度</small>
+                                    <p class="mb-0 fw-bold small">{{ active_breakdown.income_stability.score }}%</p>
+                                </div>
+                            </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右側：維度二 + 維度三 -->
+                    <div class="col-md-6">
+                        <!-- 維度二：雇主信譽 -->
+                        <div class="mb-4">
+                            <h6><i class="bi bi-building text-primary"></i> 維度二：雇主信譽權重</h6>
+                    <div class="card bg-light">
+                        <div class="card-body p-2">
+                            <div class="row">
+                                <div class="col-4 text-center">
+                                    <div class="fs-3 fw-bold
+                                        {% if client.employer_rating.grade == 'AA' %}text-success
+                                        {% elif client.employer_rating.grade == 'A' %}text-primary
+                                        {% elif client.employer_rating.grade == 'B' %}text-warning
+                                        {% else %}text-danger{% endif %}">
+                                        {{ client.employer_rating.grade }}
+                                    </div>
+                                    <small class="text-muted">評級</small>
+                                </div>
+                                <div class="col-8">
+                                    <p class="mb-1 small"><strong>信評：</strong>{{ client.employer_rating.outlook }}</p>
+                                    <p class="mb-1 small"><strong>產業：</strong>{{ client.employer_rating.industry }}</p>
+                                    <p class="mb-0 small"><strong>風險：</strong>{{ client.employer_rating.score }}/100</p>
+                                </div>
+                            </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 維度三：行為特徵 -->
+                        <div>
+                            <h6><i class="bi bi-activity text-warning"></i> 維度三：行為特徵數據</h6>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <div class="card h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="mb-1">
+                                        <i class="bi bi-send-check fs-3
+                                            {% if client.behavior_data.remittance_regularity >= 90 %}text-success
+                                            {% elif client.behavior_data.remittance_regularity >= 80 %}text-warning
+                                            {% else %}text-danger{% endif %}"></i>
+                                    </div>
+                                    <small class="fw-bold">跨境匯款規律性</small>
+                                    <div class="progress mt-1" style="height: 15px;">
+                                        <div class="progress-bar
+                                            {% if client.behavior_data.remittance_regularity >= 90 %}bg-success
+                                            {% elif client.behavior_data.remittance_regularity >= 80 %}bg-warning
+                                            {% else %}bg-danger{% endif %}"
+                                            style="width: {{ client.behavior_data.remittance_regularity }}%">
+                                            {{ client.behavior_data.remittance_regularity }}%
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card h-100">
+                                <div class="card-body text-center p-2">
+                                    <div class="mb-1">
+                                        <i class="bi bi-mic fs-3
+                                            {% if client.behavior_data.voice_ai_risk == '低風險' %}text-success
+                                            {% elif client.behavior_data.voice_ai_risk == '中風險' %}text-warning
+                                            {% else %}text-danger{% endif %}"></i>
+                                    </div>
+                                    <small class="fw-bold">AI語音測謊</small>
+                                    <div class="mt-1">
+                                        <span class="badge
+                                            {% if client.behavior_data.voice_ai_risk == '低風險' %}bg-success
+                                            {% elif client.behavior_data.voice_ai_risk == '中風險' %}bg-warning
+                                            {% else %}bg-danger{% endif %}">
+                                            {{ client.behavior_data.voice_ai_risk }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+
+<!-- 腳本 -->
+<script>
+// 切換儀表板區塊顯示
+function toggleDashboardSection(section) {
+    const scoreBreakdownSection = document.getElementById('scoreBreakdownSection');
+    const dataMatrixSection = document.getElementById('dataMatrixSection');
+    const btnScoreBreakdown = document.getElementById('btnScoreBreakdown');
+    const btnDataMatrix = document.getElementById('btnDataMatrix');
+
+    scoreBreakdownSection.style.display = 'none';
+    dataMatrixSection.style.display = 'none';
+    btnScoreBreakdown.classList.remove('active');
+    btnDataMatrix.classList.remove('active');
+
+    if (section === 'scoreBreakdown') {
+        scoreBreakdownSection.style.display = 'block';
+        btnScoreBreakdown.classList.add('active');
+    } else if (section === 'dataMatrix') {
+        dataMatrixSection.style.display = 'block';
+        btnDataMatrix.classList.add('active');
+    }
+}
+</script>
+
+<script>
+// Salary Stacked Bar Chart
+const salaryCtx = document.getElementById('salaryChart');
+if (salaryCtx) {
+    new Chart(salaryCtx, {
+        type: 'bar',
+        data: {
+            labels: {{ client.salary_data.labels | tojson }},
+            datasets: [
+                {
+                    label: '底薪',
+                    data: {{ client.salary_data.base_salary | tojson }},
+                    backgroundColor: '#27ae60',
+                    borderRadius: { topLeft: 0, topRight: 0 }
+                },
+                {
+                    label: '加班費',
+                    data: {{ client.salary_data.overtime | tojson }},
+                    backgroundColor: '#f39c12',
+                    borderRadius: { topLeft: 4, topRight: 4 }
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { boxWidth: 12, font: { size: 11 } }
+                },
+                tooltip: {
+                    callbacks: {
+                        afterBody: function(items) {
+                            const total = items.reduce((s, i) => s + i.parsed.y, 0);
+                            return '合計：NT$ ' + total.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: { stacked: true },
+                y: { stacked: true, beginAtZero: true }
+            }
+        }
+    });
+}
+</script>

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>移工端 | H-CAP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        body {
+            background: #f1f5f9;
+            min-height: 100vh;
+            padding-top: 2rem;
+            padding-bottom: 3rem;
+        }
+
+        .navbar-custom {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            margin-bottom: 3rem;
+            border-radius: 15px;
+        }
+
+        .navbar-custom .navbar-brand {
+            font-weight: 700;
+            color: #10b981 !important;
+            font-size: 1.5rem;
+        }
+
+        /* 左側返回按鈕 */
+        .back-home-btn {
+            position: fixed;
+            left: 2rem;
+            top: 2rem;
+            z-index: 1000;
+            background: white;
+            color: #10b981;
+            border: none;
+            border-radius: 16px;
+            padding: 1.2rem 2rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-decoration: none;
+            font-size: 1.3rem;
+            font-weight: 700;
+        }
+
+        .back-home-btn i {
+            font-size: 1.5rem;
+        }
+
+        .back-home-btn:hover {
+            transform: translateX(-5px);
+            box-shadow: 0 6px 30px rgba(0,0,0,0.2);
+            color: #10b981;
+        }
+
+        .page-title-section {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            border-radius: 20px;
+            padding: 2.5rem 2rem;
+            margin-bottom: 3rem;
+            box-shadow: 0 10px 40px rgba(16, 185, 129, 0.3);
+        }
+
+        .page-title {
+            color: white;
+            text-align: center;
+            margin-bottom: 0;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .page-title h1 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .page-title p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+
+        .service-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .service-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2.5rem;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: both;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .service-card:nth-child(2) {
+            animation-delay: 0.15s;
+        }
+
+        .service-card:nth-child(3) {
+            animation-delay: 0.3s;
+        }
+
+        .service-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+        }
+
+        .service-card.loan::before {
+            background: linear-gradient(90deg, #3b82f6, #2563eb);
+        }
+
+        .service-card.credit::before {
+            background: linear-gradient(90deg, #f59e0b, #d97706);
+        }
+
+        .service-card.app::before {
+            background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.2);
+        }
+
+        .card-icon {
+            width: 70px;
+            height: 70px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 2rem;
+            color: white;
+        }
+
+        .loan .card-icon {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .credit .card-icon {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .app .card-icon {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+
+        .service-card h3 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #2d3748;
+        }
+
+        .service-card p {
+            color: #718096;
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .feature-tag {
+            background: #f7fafc;
+            color: #4a5568;
+            padding: 0.4rem 0.9rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+        }
+
+        .loan .feature-tag {
+            border-color: #3b82f6;
+            color: #3b82f6;
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .credit .feature-tag {
+            border-color: #f59e0b;
+            color: #d97706;
+            background: rgba(245, 158, 11, 0.1);
+        }
+
+        .app .feature-tag {
+            border-color: #8b5cf6;
+            color: #8b5cf6;
+            background: rgba(139, 92, 246, 0.1);
+        }
+
+        .action-btn {
+            width: 100%;
+            padding: 1rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .loan .action-btn {
+            background: linear-gradient(135deg, #3b82f6, #2563eb);
+        }
+
+        .credit .action-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
+        .app .action-btn {
+            background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+        }
+
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+            color: white;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .service-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .page-title h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 左側返回首頁按鈕 -->
+    <a href="/" class="back-home-btn" title="返回首頁">
+        <i class="fas fa-home"></i>
+        <span>首頁</span>
+    </a>
+
+    <div class="container">
+        <!-- 頁面標題 -->
+        <div class="page-title-section">
+            <div class="page-title">
+                <h1><i class="fas fa-user-circle me-2"></i>移工端服務</h1>
+                <p>選擇您需要的金融服務</p>
+            </div>
+        </div>
+
+        <!-- 服務卡片 -->
+        <div class="service-cards">
+            <!-- 貸款申請 -->
+            <div class="service-card loan">
+                <div class="card-icon">
+                    <i class="fas fa-hand-holding-usd"></i>
+                </div>
+                <h3>小額貸款申請</h3>
+                <p>快速獲得資金支援，AI 智能核貸，最高可借 5 萬元</p>
+
+                <div class="feature-tags">
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>即時審核</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>低利率</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>彈性還款</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>語音驗證</span>
+                </div>
+
+                <a href="/loan" class="action-btn">
+                    <span>立即申請</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <!-- 信用卡申請 -->
+            <div class="service-card credit">
+                <div class="card-icon">
+                    <i class="fas fa-credit-card"></i>
+                </div>
+                <h3>信用卡申請</h3>
+                <p>移工專屬信用卡，數位 KYC 驗證，輕鬆管理消費</p>
+
+                <div class="feature-tags">
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>數位 KYC</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>區塊鏈驗證</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>動態額度</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>即時通知</span>
+                </div>
+
+                <a href="/apply" class="action-btn">
+                    <span>立即申請</span>
+                    <i class="fas fa-arrow-right"></i>
+                </a>
+            </div>
+
+            <!-- App 模擬器 -->
+            <div class="service-card app">
+                <div class="card-icon">
+                    <i class="fas fa-mobile-alt"></i>
+                </div>
+                <h3>App 數位足跡</h3>
+                <p>安裝 H-CAP App，透過數位行為累積信用分數</p>
+
+                <div class="feature-tags">
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>GPS 定位</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>行為監控</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>獎勵機制</span>
+                    <span class="feature-tag"><i class="fas fa-check me-1"></i>即時回饋</span>
+                </div>
+
+                {% if custom_exists %}
+                <a href="/app_simulator?client_id=custom" target="_blank" class="action-btn">
+                    <span>體驗 Demo</span>
+                    <i class="fas fa-external-link-alt"></i>
+                </a>
+                {% else %}
+                <a class="action-btn disabled" style="opacity: 0.5; pointer-events: none; background: #999;">
+                    <span>請先完成申請</span>
+                    <i class="fas fa-lock"></i>
+                </a>
+                <p class="text-muted small mt-2 mb-0"><i class="fas fa-info-circle me-1"></i>需先提交信用卡或貸款申請後才可使用</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

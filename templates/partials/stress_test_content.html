@@ -1,0 +1,406 @@
+<!-- 壓力測試內容 (嵌入客戶詳細頁) -->
+
+<!-- 頂部切換按鈕 -->
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-center">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-lg px-4 active" id="btnStAnalysis" onclick="toggleStSection('analysis')">
+                <i class="fas fa-chart-bar me-2"></i>狀態分析
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-lg px-4" id="btnStAlgo" onclick="toggleStSection('algo')">
+                <i class="fas fa-calculator me-2"></i>演算法說明
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 狀態分析區塊 ==================== -->
+<div id="stAnalysisSection">
+    <div class="row mb-4">
+        <!-- 左側：壓力測試設定 -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-warning text-dark">
+                    <h4 class="mb-0"><i class="fas fa-bolt me-2"></i>壓力測試設定</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-bold">1. 選擇壓力情境</label>
+                            <select id="scenarioSelect" class="form-select form-select-lg">
+                                <option value="recession">經濟衰退 (GDP ↓3%, 失業率 ↑5%)</option>
+                                <option value="currency">匯率波動 (母國匯率 ↓20%)</option>
+                                <option value="industry">產業衝擊 (製造業訂單 ↓30%)</option>
+                                <option value="combined">複合式衝擊 (系統性風險)</option>
+                            </select>
+                        </div>
+
+                        <div class="col-12 mt-3">
+                            <h5 class="fw-bold border-bottom pb-2">2. 敏感度加權調整</h5>
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">雇主評級下調</label>
+                                    <div class="input-group">
+                                        <input type="range" class="form-range" id="stEmployerAdjust" min="0" max="20" value="0" step="5">
+                                        <span class="input-group-text" id="stEmployerValue" style="min-width: 65px; justify-content: center; font-weight: bold;">0%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">加班費縮減</label>
+                                    <div class="input-group">
+                                        <input type="range" class="form-range" id="stOvertimeAdjust" min="0" max="30" value="0" step="5">
+                                        <span class="input-group-text" id="stOvertimeValue" style="min-width: 65px; justify-content: center; font-weight: bold;">0%</span>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">匯款規律性下降</label>
+                                    <div class="input-group">
+                                        <input type="range" class="form-range" id="stRemittanceAdjust" min="0" max="20" value="0" step="5">
+                                        <span class="input-group-text" id="stRemittanceValue" style="min-width: 65px; justify-content: center; font-weight: bold;">0%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 mt-4">
+                            <button id="stRunStressTest" class="btn btn-warning w-100 py-3 fw-bold">
+                                <i class="fas fa-bolt me-2"></i> 執行壓力測試分析
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 韌性分析結論 -->
+            <div id="stResultsSection" style="display: none;" class="mt-3">
+                <div class="alert alert-warning mb-0 py-3 shadow-sm">
+                    <h5 class="alert-heading mb-2"><i class="fas fa-lightbulb me-2"></i>韌性分析結論</h5>
+                    <p id="stConclusionText" class="mb-0 fs-6">等待執行結果...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右側：動態 H-CAP 評分 -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-dark text-white">
+                    <h4 class="mb-0"><i class="fas fa-chart-line me-2"></i>動態 H-CAP 評分</h4>
+                </div>
+                <div class="card-body" id="stDynamicScorePanel">
+                    <div class="text-center mb-3">
+                        <div class="small text-muted mb-1">H-CAP 基礎評分</div>
+                        <h2 class="display-4 fw-bold text-primary mb-0" id="stMainScore">{{ active_score }}</h2>
+                        <!-- 壓力後分數 (隱藏，測試後顯示) -->
+                        <div id="stStressedScoreRow" style="display: none;">
+                            <i class="fas fa-arrow-down text-danger my-1"></i>
+                            <div class="small text-muted mb-1">壓力後評分</div>
+                            <h2 class="display-5 fw-bold mb-0" id="stStressedScore" style="color: #dc3545;">--</h2>
+                            <span class="badge mt-1" id="stDropBadge">--</span>
+                        </div>
+                    </div>
+                    <div class="text-start px-1">
+                        <!-- 償債能力 -->
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small">償債能力</span>
+                            <span class="small">
+                                <span class="fw-bold" id="stCapOrig">{{ active_breakdown.repayment_capacity.score }}</span>
+                                <span id="stCapStressed" style="display:none;"></span>
+                            </span>
+                        </div>
+                        <div class="progress mb-2" style="height:6px">
+                            <div class="progress-bar bg-success" id="stCapBar" style="width:{{ active_breakdown.repayment_capacity.score }}%"></div>
+                        </div>
+                        <!-- 收入穩定 -->
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small">收入穩定</span>
+                            <span class="small">
+                                <span class="fw-bold" id="stIncOrig">{{ active_breakdown.income_stability.score }}</span>
+                                <span id="stIncStressed" style="display:none;"></span>
+                            </span>
+                        </div>
+                        <div class="progress mb-2" style="height:6px">
+                            <div class="progress-bar bg-info" id="stIncBar" style="width:{{ active_breakdown.income_stability.score }}%"></div>
+                        </div>
+                        <!-- 還款意願 -->
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small">還款意願</span>
+                            <span class="small">
+                                <span class="fw-bold" id="stWillOrig">{{ active_breakdown.repayment_willingness.score }}</span>
+                                <span id="stWillStressed" style="display:none;"></span>
+                            </span>
+                        </div>
+                        <div class="progress mb-2" style="height:6px">
+                            <div class="progress-bar bg-warning" id="stWillBar" style="width:{{ active_breakdown.repayment_willingness.score }}%"></div>
+                        </div>
+                        <!-- 外部風險 -->
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="small">外部風險</span>
+                            <span class="small">
+                                <span class="fw-bold" id="stExtOrig">{{ active_breakdown.external_risk.score }}</span>
+                                <span id="stExtStressed" style="display:none;"></span>
+                            </span>
+                        </div>
+                        <div class="progress mb-2" style="height:6px">
+                            <div class="progress-bar bg-danger" id="stExtBar" style="width:{{ active_breakdown.external_risk.score }}%"></div>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2 border-top text-center">
+                        {% if client.loan_recommendation.survival_loan.approved %}
+                            <span class="badge bg-success px-3 py-2">可核貸</span>
+                            <div class="small text-muted mt-1">建議額度 NT$ {{ client.loan_recommendation.survival_loan.max_amount | intcomma }}</div>
+                        {% else %}
+                            <span class="badge bg-danger px-3 py-2">拒絕核貸</span>
+                            <div class="small text-muted mt-1">風險過高</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ==================== 演算法說明區塊 ==================== -->
+<div id="stAlgoSection" style="display: none;">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 border-top border-4 border-primary">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 fw-bold text-dark">
+                        <i class="fas fa-calculator me-2"></i>H-CAP 壓力測試敏感度分析模型算法
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-4">
+                        <!-- 核心傳導公式 -->
+                        <div class="col-md-6">
+                            <h5 class="text-primary fw-bold mb-3">1. 核心傳導公式</h5>
+                            <div class="p-3 rounded mb-3 text-center" style="background-color: #f8f9fa; border-left: 4px solid #0d6efd; font-size: 1rem;">
+                                S<sub>new</sub> = S<sub>old</sub> - [ &Delta;<sub>shock</sub> &times; (1 + &alpha;<sub>slider</sub>) &times; &beta;<sub>sensitivity</sub> ]
+                            </div>
+                            <ul class="list-unstyled text-muted px-3" style="font-size: 0.9rem;">
+                                <li class="mb-2"><strong>S<sub>new</sub></strong>：壓力測試後分數</li>
+                                <li class="mb-2"><strong>S<sub>old</sub></strong>：原始評分</li>
+                                <li class="mb-2"><strong>&Delta;<sub>shock</sub></strong>：情境基礎衝擊值（由情境模板定義）</li>
+                                <li class="mb-2"><strong>&alpha;<sub>slider</sub></strong>：滑桿加權係數（使用者調整）</li>
+                                <li class="mb-2"><strong>&beta;<sub>sensitivity</sub></strong>：維度敏感度係數（見參數表）</li>
+                            </ul>
+                        </div>
+
+                        <!-- 敏感度係數參數表 -->
+                        <div class="col-md-6">
+                            <h5 class="text-primary fw-bold mb-3">2. 敏感度係數參數表</h5>
+                            <table class="table table-sm table-bordered text-center bg-white" style="font-size: 0.9rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>風險因子 \ 維度</th>
+                                        <th>償債能力</th>
+                                        <th>收入穩定</th>
+                                        <th>還款意願</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">加班費波動</td>
+                                        <td class="text-danger fw-bold">0.25</td>
+                                        <td class="text-warning fw-bold">0.40</td>
+                                        <td>-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">雇主評級下調</td>
+                                        <td>-</td>
+                                        <td class="text-danger fw-bold">0.40</td>
+                                        <td>-</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">匯率波動</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td class="text-danger fw-bold">0.60</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+
+                            <h5 class="text-primary fw-bold mb-3 mt-4">3. 情境衝擊模板</h5>
+                            <table class="table table-sm table-bordered text-center bg-white" style="font-size: 0.85rem;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>情境</th>
+                                        <th>雇主評級</th>
+                                        <th>加班費</th>
+                                        <th>匯款</th>
+                                        <th>外部風險</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="fw-bold">經濟衰退</td>
+                                        <td class="text-danger">-15</td>
+                                        <td class="text-danger">-20</td>
+                                        <td>-5</td>
+                                        <td class="text-danger">-15</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">匯率波動</td>
+                                        <td>0</td>
+                                        <td>0</td>
+                                        <td class="text-danger">-15</td>
+                                        <td class="text-danger">-25</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold">產業衝擊</td>
+                                        <td class="text-danger">-20</td>
+                                        <td class="text-danger">-25</td>
+                                        <td>-10</td>
+                                        <td class="text-danger">-15</td>
+                                    </tr>
+                                    <tr>
+                                        <td class="fw-bold text-danger">複合式衝擊</td>
+                                        <td class="text-danger">-25</td>
+                                        <td class="text-danger">-30</td>
+                                        <td class="text-danger">-20</td>
+                                        <td class="text-danger">-35</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    input[type=range]::-webkit-slider-runnable-track {
+        background: #adb5bd; height: 8px; border-radius: 4px; border: 1px solid #dee2e6;
+    }
+</style>
+
+<script>
+    // ===== 頂部區塊切換 =====
+    function toggleStSection(section) {
+        const analysisSection = document.getElementById('stAnalysisSection');
+        const algoSection = document.getElementById('stAlgoSection');
+        const btnAnalysis = document.getElementById('btnStAnalysis');
+        const btnAlgo = document.getElementById('btnStAlgo');
+
+        if (section === 'analysis') {
+            analysisSection.style.display = 'block';
+            algoSection.style.display = 'none';
+            btnAnalysis.classList.add('active');
+            btnAlgo.classList.remove('active');
+        } else {
+            analysisSection.style.display = 'none';
+            algoSection.style.display = 'block';
+            btnAnalysis.classList.remove('active');
+            btnAlgo.classList.add('active');
+        }
+    }
+
+    // ===== 客戶資料 (Jinja 注入) =====
+    const stClient = {
+        name: {{ client.name | tojson }},
+        score: {{ active_score }},
+        breakdown: {
+            repayment_capacity: { score: {{ active_breakdown.repayment_capacity.score }} },
+            income_stability: { score: {{ active_breakdown.income_stability.score }} },
+            repayment_willingness: { score: {{ active_breakdown.repayment_willingness.score }} },
+            external_risk: { score: {{ active_breakdown.external_risk.score }} }
+        }
+    };
+
+    // ===== 壓力情境定義 =====
+    const stScenarios = {
+        recession: { name: "經濟衰退", desc: "GDP下降3%，失業率上升5%。", impacts: { employer_rating: -15, overtime: -20, remittance: -5, external_risk: -15 } },
+        currency: { name: "匯率波動", desc: "母國匯率貶值20%。", impacts: { employer_rating: 0, overtime: 0, remittance: -15, external_risk: -25 } },
+        industry: { name: "產業衝擊", desc: "製造業訂單下降30%。", impacts: { employer_rating: -20, overtime: -25, remittance: -10, external_risk: -15 } },
+        combined: { name: "複合式衝擊", desc: "系統性風險同時發生。", impacts: { employer_rating: -25, overtime: -30, remittance: -20, external_risk: -35 } }
+    };
+
+    // ===== 滑桿數值同步 =====
+    ['Employer', 'Overtime', 'Remittance'].forEach(type => {
+        const el = document.getElementById('st' + type + 'Adjust');
+        if (el) {
+            el.addEventListener('input', function() {
+                document.getElementById('st' + type + 'Value').textContent = '+' + this.value + '%';
+            });
+        }
+    });
+
+    // ===== 壓力計算 =====
+    function stCalculateStress(client, scenario, adj) {
+        const b = client.breakdown;
+        const imp = scenario.impacts;
+
+        const s_cap = Math.max(20, Math.round(b.repayment_capacity.score + (imp.overtime * (1 + adj.ot) * 0.8)));
+        const s_inc = Math.max(20, Math.round(b.income_stability.score + (imp.employer_rating * (1 + adj.emp) * 0.6)));
+        const s_will = Math.max(20, Math.round(b.repayment_willingness.score + (imp.remittance * (1 + adj.remit) * 0.9)));
+        const s_ext = Math.max(20, Math.round(b.external_risk.score + imp.external_risk));
+
+        const final = Math.round((s_cap * 0.4 + s_inc * 0.3 + s_will * 0.2 + s_ext * 0.1) * 8.5);
+        return { cap: s_cap, inc: s_inc, will: s_will, ext: s_ext, final: Math.max(300, final) };
+    }
+
+    // ===== 動態更新右側 H-CAP 評分面板 =====
+    function stUpdateDynamicScore(stressed) {
+        const drop = Math.round((1 - stressed.final / stClient.score) * 100);
+        const scoreColor = stressed.final >= 700 ? '#0d6efd' : stressed.final >= 600 ? '#ffc107' : '#dc3545';
+
+        // 壓力後總分
+        document.getElementById('stStressedScoreRow').style.display = 'block';
+        const stressedEl = document.getElementById('stStressedScore');
+        stressedEl.innerText = stressed.final;
+        stressedEl.style.color = scoreColor;
+
+        const dropBadge = document.getElementById('stDropBadge');
+        dropBadge.innerText = '下降 ' + drop + '%';
+        dropBadge.className = 'badge mt-1 ' + (drop > 20 ? 'bg-danger' : drop > 10 ? 'bg-warning text-dark' : 'bg-success');
+
+        // 各維度更新
+        const dims = [
+            { key: 'Cap', orig: stClient.breakdown.repayment_capacity.score, stressed: stressed.cap, bar: 'bg-success' },
+            { key: 'Inc', orig: stClient.breakdown.income_stability.score, stressed: stressed.inc, bar: 'bg-info' },
+            { key: 'Will', orig: stClient.breakdown.repayment_willingness.score, stressed: stressed.will, bar: 'bg-warning' },
+            { key: 'Ext', orig: stClient.breakdown.external_risk.score, stressed: stressed.ext, bar: 'bg-danger' }
+        ];
+
+        dims.forEach(d => {
+            const diff = d.stressed - d.orig;
+            const diffColor = diff < 0 ? '#dc3545' : '#28a745';
+            const sign = diff > 0 ? '+' : '';
+            const stressedSpan = document.getElementById('st' + d.key + 'Stressed');
+            stressedSpan.style.display = 'inline';
+            stressedSpan.innerHTML = ' <i class="fas fa-arrow-right" style="font-size:0.6rem;color:#999;"></i> <span class="fw-bold" style="color:' + diffColor + ';">' + d.stressed + '</span> <span style="font-size:0.7rem;color:' + diffColor + ';">(' + sign + diff + ')</span>';
+
+            document.getElementById('st' + d.key + 'Bar').style.width = d.stressed + '%';
+        });
+    }
+
+    // ===== 執行測試 =====
+    document.getElementById('stRunStressTest').addEventListener('click', function() {
+        const scenario = stScenarios[document.getElementById('scenarioSelect').value];
+        const adj = {
+            emp: parseInt(document.getElementById('stEmployerAdjust').value) / 100,
+            ot: parseInt(document.getElementById('stOvertimeAdjust').value) / 100,
+            remit: parseInt(document.getElementById('stRemittanceAdjust').value) / 100
+        };
+
+        const newScores = stCalculateStress(stClient, scenario, adj);
+
+        // 動態更新右側面板
+        stUpdateDynamicScore(newScores);
+
+        // 顯示結果
+        const drop = Math.round((1 - newScores.final / stClient.score) * 100);
+        document.getElementById('stResultsSection').style.display = 'block';
+        stRenderConclusion(newScores, drop);
+    });
+
+    // ===== 結論 =====
+    function stRenderConclusion(stressed, drop) {
+        const txt = document.getElementById('stConclusionText');
+        if (stressed.final < 600) txt.innerHTML = '<strong>⚠️ 高風險：</strong>評分跌破 600。建議凍結額度或追加保證人。';
+        else if (stressed.final < 700) txt.innerHTML = '<strong>⚠️ 需關注：</strong>評分下降顯著 (' + drop + '%)，建議縮短貸款週期。';
+        else txt.innerHTML = '<strong>✅ 結構強健：</strong>客戶具備足夠風險緩衝能力。';
+    }
+</script>

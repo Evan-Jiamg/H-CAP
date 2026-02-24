@@ -1,0 +1,831 @@
+<!-- 信任驗證監控核心內容 -->
+<!-- 切換按鈕 -->
+<div class="row mb-3">
+    <div class="col-12 d-flex justify-content-center">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-primary btn-lg px-4 active" id="btnDataCenterTop" onclick="toggleSection('dataCenter')">
+                <i class="fas fa-database me-2"></i>數據監控中心
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-lg px-4" id="btnLogicTop" onclick="toggleSection('logic')">
+                <i class="fas fa-cogs me-2"></i>運作邏輯和定義
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 數據監控中心內容 -->
+<div id="dataCenterSection">
+    <div class="row">
+        <!-- 左側：信任指數監控 -->
+        <div class="col-lg-8">
+            <div class="dashboard-card mb-4">
+                <!-- 即時信任指數 + 四大指標 -->
+                <div class="row g-3 p-3">
+                    <div class="col-md-4">
+                        <div class="trust-display-compact h-100 d-flex flex-column justify-content-center">
+                            <div class="small text-muted mb-2">即時信任指數</div>
+                            <div class="trust-score-medium" id="currentTrustScore">--</div>
+                            <span class="trust-level-badge trust-level-1" id="trustLevelBadge">
+                                <i class="fas fa-circle-notch fa-spin me-2"></i>連線中...
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-8">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <div class="metric-card-compact metric-good" id="cardMath">
+                                    <div class="metric-value-compact" id="mathSuccessRate">98%</div>
+                                    <div class="metric-label-compact">數學挑戰</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-card-compact metric-good" id="cardWifi">
+                                    <div class="metric-value-compact" id="wifiConsistency">一致</div>
+                                    <div class="metric-label-compact">Wi-Fi指紋</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-card-compact metric-good" id="cardBattery">
+                                    <div class="metric-value-compact" id="batteryStability">穩定</div>
+                                    <div class="metric-label-compact">電量模式</div>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="metric-card-compact metric-good">
+                                    <div class="metric-value-compact" id="simulationDays">0</div>
+                                    <div class="metric-label-compact">模擬天數</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 跨境匯款數據 & AI 視訊面試數據 -->
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <div class="dashboard-card h-100">
+                        <div class="card-header-custom" style="background: #f1f3f9; border-bottom: 1px solid #e3e6f0;">
+                            <h5 class="mb-0 fw-bold" style="color: #4e73df; font-size: 1rem;">
+                                <i class="fas fa-file-invoice-dollar me-2"></i>跨境匯款數據
+                            </h5>
+                        </div>
+                        <div class="p-3">
+                            <table class="table table-borderless mb-0" style="font-size: 0.9rem;">
+                                <tr>
+                                    <td class="text-muted fw-bold" style="width: 40%;">匯款規律性</td>
+                                    <td class="text-success fs-5 fw-bold" id="lcRemitRate">-- %</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted fw-bold">平均匯款金額</td>
+                                    <td class="fw-bold" id="lcRemitAmount">--</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted fw-bold">最後同步</td>
+                                    <td class="text-muted small font-monospace" id="lcRemitTime">--</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="dashboard-card h-100">
+                        <div class="card-header-custom d-flex justify-content-between align-items-center" style="background: #f1f3f9; border-bottom: 1px solid #e3e6f0;">
+                            <h5 class="mb-0 fw-bold" style="color: #4e73df; font-size: 1rem;">
+                                <i class="fas fa-fingerprint me-2"></i>AI 視訊面試數據
+                            </h5>
+                            <button class="btn btn-md btn-outline-primary" onclick="redoVoiceAI('{{ client_id }}')">
+                                <i class="fas fa-microphone-alt me-1"></i> 補件/重錄
+                            </button>
+                        </div>
+                        <div class="p-3">
+                            <table class="table table-borderless mb-0" style="font-size: 0.9rem;">
+                                <tr>
+                                    <td class="text-muted fw-bold" style="width: 50%;">AI 風險評分</td>
+                                    <td class="text-primary fs-5 fw-bold" id="lcVoiceScore">--</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted fw-bold">聲紋匹配度</td>
+                                    <td class="fw-bold" id="lcVoiceMatch">-- %</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted fw-bold">壓力顫抖指數</td>
+                                    <td id="lcStressLevel" class="text-success">正常 (Normal)</td>
+                                </tr>
+                                <tr>
+                                    <td class="text-muted fw-bold">分析時間</td>
+                                    <td class="text-muted small font-monospace" id="lcVoiceTime">--</td>
+                                </tr>
+                            </table>
+                            <!-- 全程側錄監控 -->
+                            <div class="mt-2 p-2 border rounded bg-light d-flex justify-content-between align-items-center" style="border-left: 4px solid #dc3545 !important;">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-white rounded p-1 me-2 border text-center" style="width: 35px; height: 35px; display: flex; align-items: center; justify-content: center;">
+                                        <i class="fas fa-video text-danger"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold small text-dark">全程側錄 <span style="font-size: 0.65rem; background: #ffebee; color: #c62828; padding: 2px 6px; border-radius: 4px; border: 1px solid #ffcdd2; margin-left: 3px;">防作弊</span></div>
+                                    </div>
+                                </div>
+                                <button class="btn btn-sm btn-danger px-2 shadow-sm" onclick="playFullSessionLC()" style="font-size: 0.75rem;">
+                                    <i class="fas fa-play me-1"></i> 調閱
+                                </button>
+                            </div>
+                            <!-- 逐題分析 -->
+                            <div class="mt-2">
+                                <small class="text-muted fw-bold d-block mb-1 pt-1 border-top">AI 逐題分析</small>
+                                <div class="table-responsive" style="max-height: 120px;">
+                                    <table class="table table-sm table-bordered mb-0" style="font-size: 0.75rem;">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width:15%">題號</th>
+                                                <th>AI 轉錄</th>
+                                                <th style="width:15%">分數</th>
+                                                <th style="width:15%">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="lcVideoListBody">
+                                            <tr><td colspan="4" class="text-center text-muted">尚無錄影資料</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 右側：即時事件流 -->
+        <div class="col-lg-4">
+            <div class="dashboard-card" style="height: calc(100% - 1rem);">
+                <div class="card-header-custom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-stream me-2"></i>即時事件流</h5>
+                    <span class="badge bg-secondary" id="eventCount">0</span>
+                </div>
+                <div class="event-stream p-3" id="eventStream" style="max-height: 420px; overflow-y: auto;">
+                    <div class="text-center text-muted mt-5">
+                        <i class="fas fa-satellite-dish fa-2x mb-3 opacity-50"></i><br>
+                        正在等待 App 訊號...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 底部並排：信任指數趨勢 + L3 -->
+    <div class="row g-3 mt-1">
+        <!-- 信任指數趨勢 -->
+        <div class="col-md-6">
+            <div class="dashboard-card" style="height:320px;">
+                <div class="card-header-custom d-flex justify-content-between">
+                    <h5 class="mb-0 fw-bold"><i class="fas fa-chart-line me-2"></i>信任指數趨勢</h5>
+                    <div class="heartbeat-indicator">
+                        <div class="wave-container">
+                            <div class="wave-bar" style="animation-delay: 0s"></div>
+                            <div class="wave-bar" style="animation-delay: 0.1s"></div>
+                            <div class="wave-bar" style="animation-delay: 0.2s"></div>
+                            <div class="wave-bar" style="animation-delay: 0.3s"></div>
+                        </div>
+                        <div class="pulse-dot" id="pulseDot"></div>
+                        <span class="small text-muted" id="heartbeatStatus">等待訊號...</span>
+                    </div>
+                </div>
+                <div class="p-3" style="height:258px;">
+                    <canvas id="trustChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <!-- L3 GPS 足跡 -->
+        <div class="col-md-6">
+            <div style="position:relative; height:320px;">
+                <!-- L3 開啟時 -->
+                <div id="l3Section" style="display:none; position:absolute; inset:0; z-index:2;">
+                    <div class="dashboard-card border-start border-4 border-info" style="height:100%;">
+                        <div class="card-header-custom d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0 fw-bold text-info" style="font-size:0.95rem;"><i class="fas fa-map-marked-alt me-2"></i>L3 數位足跡監控 (GPS)</h5>
+                            <span class="badge bg-info text-dark blink-badge"><i class="fas fa-satellite me-1"></i> LIVE</span>
+                        </div>
+                        <div class="p-3">
+                            <div class="row align-items-center">
+                                <div class="col-5">
+                                    <div class="text-muted small text-uppercase fw-bold mb-1">Current Context</div>
+                                    <h5 class="fw-bold text-dark mb-1" id="gpsContextText">--</h5>
+                                    <div class="mt-2" id="gpsStatusBadge">
+                                        <span class="badge bg-secondary">等待訊號</span>
+                                    </div>
+                                    <p class="text-muted small mt-2 mb-0">
+                                        <i class="fas fa-info-circle me-1"></i>每秒接收高頻壓縮數據包
+                                    </p>
+                                </div>
+                                <div class="col-7 border-start">
+                                    <div class="text-muted small mb-1 ps-2">軌跡安全性分析</div>
+                                    <div class="ps-2" style="height:200px;">
+                                        <canvas id="gpsChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <!-- L3 未開啟時 -->
+                <div id="l3Disabled" class="dashboard-card d-flex flex-column align-items-center justify-content-center text-center" style="position:absolute; inset:0; z-index:1;">
+                    <i class="fas fa-map-marked-alt fa-2x mb-3 text-muted opacity-25"></i>
+                    <div class="fw-bold text-muted">L3 GPS 足跡</div>
+                    <div class="small text-muted mt-1">未開啟</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 全程側錄 Modal -->
+<div class="modal fade" id="lcVideoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-black">
+            <div class="modal-header border-0 bg-dark text-white">
+                <h6 class="modal-title">
+                    <i class="fas fa-user-secret me-2 text-danger"></i>全程側錄監控回放 (Full Session)
+                </h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" onclick="stopLCPlayer()"></button>
+            </div>
+            <div class="modal-body p-0 text-center bg-black">
+                <video id="lcFullPlayer" controls autoplay style="width: 100%; max-height: 70vh; background: black;"></video>
+            </div>
+            <div class="modal-footer border-0 justify-content-between bg-dark">
+                <small class="text-white-50">正在播放全程側錄監控...</small>
+                <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" onclick="stopLCPlayer()">關閉</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- 運作邏輯和定義內容 -->
+<div class="row mb-5" id="logicSection" style="display: none;">
+    <div class="col-12">
+        <div class="dashboard-card border-top border-4 border-primary">
+            <div class="card-header-custom bg-light">
+                <h5 class="mb-0 fw-bold text-dark">
+                    <i class="fas fa-cogs me-2"></i>系統運作邏輯與指標定義 (System Logic & Metrics)
+                </h5>
+            </div>
+            <div class="p-4">
+                <h6 class="fw-bold text-secondary mb-3 small text-uppercase ls-1">資料流運作週期 (0.33 Hz)</h6>
+                <div class="process-flow mb-5">
+                    <div class="process-line"></div>
+                    <div class="process-step">
+                        <div class="process-icon"><i class="fas fa-mobile-alt"></i></div>
+                        <h6 class="fw-bold mb-1">1. 採集特徵</h6>
+                        <p class="small text-muted lh-sm">App 計算數學題、Wi-Fi 哈希、電量。</p>
+                    </div>
+                    <div class="process-step">
+                        <div class="process-icon"><i class="fas fa-lock"></i></div>
+                        <h6 class="fw-bold mb-1">2. 加密傳輸</h6>
+                        <p class="small text-muted lh-sm">每 3 秒 (模擬1天) 發送微型封包。</p>
+                    </div>
+                    <div class="process-step">
+                        <div class="process-icon"><i class="fas fa-server"></i></div>
+                        <h6 class="fw-bold mb-1">3. 風控評分</h6>
+                        <p class="small text-muted lh-sm">套用權重公式，動態計算信任分。</p>
+                    </div>
+                    <div class="process-step">
+                        <div class="process-icon"><i class="fas fa-tachometer-alt"></i></div>
+                        <h6 class="fw-bold mb-1">4. 狀態判定</h6>
+                        <p class="small text-muted lh-sm">決定是否凍結帳戶或給予優惠。</p>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+
+                <div class="row g-4">
+                    <div class="col-md-4 border-end">
+                        <h6 class="fw-bold text-success mb-3"><i class="fas fa-fingerprint me-2"></i>核心指標解讀 (Metric Logic)</h6>
+                        <ul class="list-unstyled metric-explain">
+                            <li class="mb-3">
+                                <strong><i class="fas fa-calculator text-danger"></i> 數學挑戰 (PoW)</strong><br>
+                                <span class="text-muted d-block ps-4">
+                                    監控目的：防止模擬器與自動腳本。<br>
+                                    判讀：<span class="text-success">98% (真人)</span> / <span class="text-danger">低分 (機器人)</span>
+                                </span>
+                            </li>
+                            <li class="mb-3">
+                                <strong><i class="fas fa-wifi text-warning"></i> Wi-Fi 指紋 (Context)</strong><br>
+                                <span class="text-muted d-block ps-4">
+                                    監控目的：防止搬家或逃逸 (生活圈改變)。<br>
+                                    判讀：<span class="text-success">一致 (宿舍)</span> / <span class="text-warning">未知網域 (異常)</span>
+                                </span>
+                            </li>
+                            <li>
+                                <strong><i class="fas fa-battery-half text-primary"></i> 電量模式 (Behavior)</strong><br>
+                                <span class="text-muted d-block ps-4">
+                                    監控目的：防止使用「殭屍手機」假掛機。<br>
+                                    判讀：<span class="text-success">穩定 (自然)</span> / <span class="text-warning">異常耗電 (模擬器)</span>
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div class="col-md-4 border-end">
+                        <h6 class="fw-bold text-primary mb-3"><i class="fas fa-calculator me-2"></i>動態評分演算法 (Algorithm)</h6>
+                        <div class="bg-light p-2 rounded border mb-3 text-center font-monospace small">
+                            Score = 100 - Σ(Penalty) + TimeBonus
+                        </div>
+                        <table class="table table-sm table-borderless small mb-0">
+                            <thead><tr class="text-muted border-bottom"><th>異常項目</th><th class="text-end">扣分權重</th></tr></thead>
+                            <tbody>
+                                <tr><td><i class="fas fa-times-circle text-danger me-2"></i>運算驗證失敗</td><td class="text-end fw-bold text-danger">-40</td></tr>
+                                <tr><td><i class="fas fa-battery-empty text-warning me-2"></i>電量/行為異常</td><td class="text-end fw-bold text-dark">-30</td></tr>
+                                <tr><td><i class="fas fa-wifi text-warning me-2"></i>Wi-Fi 指紋突變</td><td class="text-end fw-bold text-dark">-25</td></tr>
+                                <tr><td><i class="fas fa-clock text-success me-2"></i>時間紅利 (每10天)</td><td class="text-end fw-bold text-success">+1</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="col-md-4">
+                        <h6 class="fw-bold text-dark mb-3"><i class="fas fa-cogs me-2"></i>技術規格 (Specs)</h6>
+                        <ul class="list-group list-group-flush small">
+                            <li class="list-group-item d-flex justify-content-between px-0 bg-transparent">
+                                <span>時間壓縮比</span><span class="badge bg-dark">1 : 28,800 (3秒=1天)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0 bg-transparent">
+                                <span>傳輸頻率</span><span class="badge bg-primary">0.33 Hz (每3秒)</span>
+                            </li>
+                            <li class="list-group-item d-flex justify-content-between px-0 bg-transparent">
+                                <span>看門狗逾時</span><span class="badge bg-danger">15 秒 (實體失聯)</span>
+                            </li>
+                        </ul>
+                        <div class="alert alert-warning py-1 px-2 mt-2 mb-0" style="font-size: 0.75rem;">
+                            <i class="fas fa-exclamation-triangle me-1"></i> 信任分數 < 50 將觸發立即凍結。
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // 切換區塊顯示
+    function toggleSection(section) {
+        const dataCenterSection = document.getElementById('dataCenterSection');
+        const logicSection = document.getElementById('logicSection');
+        const btnDataCenterTop = document.getElementById('btnDataCenterTop');
+        const btnLogicTop = document.getElementById('btnLogicTop');
+
+        if (section === 'dataCenter') {
+            dataCenterSection.style.display = 'block';
+            logicSection.style.display = 'none';
+            btnDataCenterTop.classList.add('active');
+            btnLogicTop.classList.remove('active');
+        } else {
+            dataCenterSection.style.display = 'none';
+            logicSection.style.display = 'block';
+            btnDataCenterTop.classList.remove('active');
+            btnLogicTop.classList.add('active');
+        }
+    }
+</script>
+
+<script>
+    // === 初始化圖表 1: 信任指數 ===
+    const ctx = document.getElementById('trustChart').getContext('2d');
+    const trustChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: '信任指數', data: [],
+                borderColor: '#27ae60', backgroundColor: 'rgba(39, 174, 96, 0.1)',
+                borderWidth: 3, tension: 0.4, fill: true, pointRadius: 0,
+                segment: {
+                    borderColor: ctx => ctx.p0.parsed.y < 60 ? '#e74c3c' : ctx.p0.parsed.y < 80 ? '#f39c12' : '#27ae60',
+                    backgroundColor: ctx => ctx.p0.parsed.y < 60 ? 'rgba(231, 76, 60, 0.1)' : ctx.p0.parsed.y < 80 ? 'rgba(243, 156, 18, 0.1)' : 'rgba(39, 174, 96, 0.1)'
+                }
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            scales: {
+                y: { min: 0, max: 100, grid: { borderDash: [5, 5] } },
+                x: { display: false }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // === 初始化圖表 2: GPS 安全係數 (L3) ===
+    const gpsCtx = document.getElementById('gpsChart').getContext('2d');
+    const gpsChart = new Chart(gpsCtx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: '軌跡安全性', data: [],
+                borderColor: '#0dcaf0', backgroundColor: 'rgba(13, 202, 240, 0.1)',
+                borderWidth: 2, tension: 0.4, fill: true, pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, animation: false,
+            scales: {
+                y: { min: 0, max: 100, display: true, ticks: { display: false } },
+                x: { display: false }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    let eventCount = 0;
+
+    // === 啟動極速輪詢 (0.5秒一次) ===
+    function startPolling() {
+        setInterval(() => {
+            fetch('/api/get_lifecycle_data?client_id={{ client_id }}&limit=10')
+                .then(r => r.json())
+                .then(data => {
+                    if (data && data.length > 0) {
+                        const latest = data[data.length - 1];
+                        updateDashboard(latest);
+                        updateEventStream(data);
+                    }
+                })
+                .catch(err => {});
+        }, 500);
+    }
+
+    function updateDashboard(data) {
+        // Sync time removed from UI
+        document.getElementById('simulationDays').innerText = data.day || 0;
+
+        // 心跳特效
+        const dot = document.getElementById('pulseDot');
+        dot.classList.add('active');
+        document.getElementById('heartbeatStatus').innerText = "Sync OK";
+        setTimeout(() => {
+            dot.classList.remove('active');
+            document.getElementById('heartbeatStatus').innerText = "Monitoring...";
+        }, 300);
+
+        // 更新分數
+        const score = data.trust_score;
+        const scoreEl = document.getElementById('currentTrustScore');
+        const badge = document.getElementById('trustLevelBadge');
+
+        scoreEl.innerText = score;
+
+        // 判斷狀態顏色
+        let statusClass = '';
+        if (score < 60 || data.risk_level === 3) {
+            scoreEl.className = 'trust-score-medium danger';
+            badge.className = 'trust-level-badge trust-level-3';
+            badge.innerHTML = '<i class="fas fa-times-circle me-2"></i>危險 (Danger)';
+            statusClass = 'danger';
+        } else if (score < 80 || data.risk_level === 2) {
+            scoreEl.className = 'trust-score-medium warn';
+            badge.className = 'trust-level-badge trust-level-2';
+            badge.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>警告 (Warning)';
+            statusClass = 'warn';
+        } else {
+            scoreEl.className = 'trust-score-medium';
+            badge.className = 'trust-level-badge trust-level-1';
+            badge.innerHTML = '<i class="fas fa-check-circle me-2"></i>正常 (Normal)';
+            statusClass = 'good';
+        }
+
+        updateMetricCards(statusClass, data.event, score);
+
+        // === 強制更新信任圖表 ===
+        trustChart.data.labels.push(data.time);
+        trustChart.data.datasets[0].data.push(score);
+        if (trustChart.data.labels.length > 40) {
+            trustChart.data.labels.shift();
+            trustChart.data.datasets[0].data.shift();
+        }
+        trustChart.update();
+
+        // === L3 顯示邏輯 ===
+        const l3Section = document.getElementById('l3Section');
+        const l3Disabled = document.getElementById('l3Disabled');
+
+        if (data.l3_enabled) {
+            l3Section.style.display = 'block';
+            l3Disabled.style.display = 'none';
+
+            const gpsText = data.gps_context || "連線建立中...";
+            document.getElementById('gpsContextText').innerText = gpsText;
+
+            const gpsBadge = document.getElementById('gpsStatusBadge');
+            let safetyScore = 50;
+
+            if (gpsText.includes('SAFE') || gpsText.includes('工廠') || gpsText.includes('宿舍') || gpsText.includes('合法')) {
+                gpsBadge.innerHTML = '<span class="badge bg-success">安全區域 (Safe Zone)</span>';
+                safetyScore = 90 + Math.floor(Math.random()*8);
+            } else if (gpsText.includes('WARN') || gpsText.includes('移動') || gpsText.includes('陌生')) {
+                gpsBadge.innerHTML = '<span class="badge bg-warning text-dark">中度風險 (Caution)</span>';
+                safetyScore = 50 + Math.floor(Math.random()*15);
+            } else if (gpsText.includes('RISK') || gpsText.includes('機場') || gpsText.includes('非法')) {
+                gpsBadge.innerHTML = '<span class="badge bg-danger">高度危險 (Restricted)</span>';
+                safetyScore = 15 + Math.floor(Math.random()*10);
+            } else {
+                gpsBadge.innerHTML = '<span class="badge bg-secondary">連線中...</span>';
+                safetyScore = 50;
+            }
+
+            gpsChart.data.labels.push(data.time);
+            gpsChart.data.datasets[0].data.push(safetyScore);
+
+            if (gpsChart.data.labels.length > 50) {
+                gpsChart.data.labels.shift();
+                gpsChart.data.datasets[0].data.shift();
+            }
+            gpsChart.update();
+
+        } else {
+            l3Section.style.display = 'none';
+            l3Disabled.style.display = '';
+        }
+    }
+
+    function updateMetricCards(status, eventText, score) {
+        const mathEl = document.getElementById('cardMath');
+        const wifiEl = document.getElementById('cardWifi');
+        const battEl = document.getElementById('cardBattery');
+
+        let mathVal = "98%";
+        if (score < 80) mathVal = (score + 5) + "%";
+
+        mathEl.className = 'metric-card-compact metric-good';
+        mathEl.querySelector('.metric-value-compact').innerText = mathVal;
+
+        wifiEl.className = 'metric-card-compact metric-good';
+        wifiEl.querySelector('.metric-value-compact').innerText = '一致';
+
+        battEl.className = 'metric-card-compact metric-good';
+        battEl.querySelector('.metric-value-compact').innerText = '穩定';
+
+        if (eventText.includes('Math') || eventText.includes('挑戰') || status === 'danger') {
+            mathEl.className = 'metric-card-compact metric-danger';
+            mathEl.querySelector('.metric-value-compact').innerText = '驗證失敗';
+        }
+        if (eventText.includes('Wi-Fi') || eventText.includes('SSID')) {
+            wifiEl.className = 'metric-card-compact metric-warn';
+            wifiEl.querySelector('.metric-value-compact').innerText = '未知網域';
+        }
+        if (eventText.includes('Battery') || eventText.includes('電量')) {
+            battEl.className = 'metric-card-compact metric-warn';
+            battEl.querySelector('.metric-value-compact').innerText = '異常耗電';
+        }
+    }
+
+    function updateEventStream(dataList) {
+        const stream = document.getElementById('eventStream');
+        if (stream.innerText.includes("正在等待")) stream.innerHTML = '';
+
+        dataList.forEach(data => {
+            const uniqueId = data.time + data.event;
+            if (data.event.includes('L3 GPS')) return;
+
+            let exists = false;
+            for(let i=0; i < Math.min(stream.children.length, 10); i++) {
+                if (stream.children[i].dataset.uid === uniqueId) {
+                    exists = true;
+                    break;
+                }
+            }
+
+            if (!exists) {
+                addEventLog(data, stream, uniqueId);
+            }
+        });
+    }
+
+    function addEventLog(data, stream, uniqueId) {
+        let cls = 'event-level-1';
+        let icon = '<i class="fas fa-check"></i>';
+
+        if (data.risk_level === 2) {
+            cls = 'event-level-2'; icon = '<i class="fas fa-exclamation"></i>';
+        } else if (data.risk_level === 3) {
+            cls = 'event-level-3'; icon = '<i class="fas fa-times"></i>';
+        } else if (data.event.includes('Auto')) {
+            cls = 'event-micro'; icon = '<i class="fas fa-wifi"></i>';
+        }
+
+        const html = `
+        <div class="event-item ${cls} animate__animated animate__fadeInLeft" data-uid="${uniqueId}">
+            <div class="event-icon">${icon}</div>
+            <div class="flex-grow-1">
+                <div class="fw-bold" style="font-size: 0.9rem;">${data.event}</div>
+                <small class="opacity-75 font-monospace">Trust Score: ${data.trust_score}</small>
+            </div>
+            <div class="text-muted small font-monospace">${data.time}</div>
+        </div>`;
+
+        stream.insertAdjacentHTML('afterbegin', html);
+        eventCount++;
+        document.getElementById('eventCount').innerText = eventCount;
+        if (stream.children.length > 20) stream.lastElementChild.remove();
+    }
+
+    document.addEventListener('DOMContentLoaded', startPolling);
+
+    // === 跨境匯款 & AI 視訊面試數據 ===
+    function redoVoiceAI(clientId) {
+        // 使用 window.open 在新分頁開啟，避免離開當前儀表板
+        window.open(`/voice_ai?client_id=${clientId}`, '_blank');
+    }
+
+    let lcFullVideoUrl = "";
+
+    function fetchBankData() {
+        fetch('/api/get_bank_database?client_id={{ client_id }}')
+            .then(r => r.json())
+            .then(db => {
+                // 跨境匯款
+                if (db.remittance_data && db.remittance_data.status === 'Synced') {
+                    document.getElementById('lcRemitRate').innerText = db.remittance_data.regularity_rate + '%';
+                    document.getElementById('lcRemitAmount').innerText = 'NT$ ' + parseInt(db.remittance_data.avg_amount).toLocaleString();
+                    document.getElementById('lcRemitTime').innerText = db.remittance_data.last_sync_time;
+                }
+                // AI 視訊面試
+                const va = db.voice_analysis;
+                if (va && (va.status === 'Verified' || va.status === 'Failed')) {
+                    document.getElementById('lcVoiceScore').innerText = va.risk_score + ' / 100';
+                    document.getElementById('lcVoiceMatch').innerText = va.voiceprint_match + '%';
+                    document.getElementById('lcVoiceTime').innerText = va.timestamp || '--';
+                    document.getElementById('lcStressLevel').innerText = '正常 (Normal)'; // 有數據時設為正常
+                    document.getElementById('lcStressLevel').className = 'text-success';
+                    if (va.full_video_url) lcFullVideoUrl = va.full_video_url;
+                    // 逐題分析
+                    const tbody = document.getElementById('lcVideoListBody');
+                    if (va.details && va.details.length > 0) {
+                        let html = '';
+                        va.details.forEach((item, idx) => {
+                            let sc = item.score >= 80 ? 'text-success' : (item.score >= 60 ? 'text-warning' : 'text-danger');
+                            html += `<tr>
+                                <td>Q${idx + 1}</td>
+                                <td><div style="max-width:100px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="${item.transcript}">${item.transcript}</div></td>
+                                <td class="${sc} fw-bold">${item.score}</td>
+                                <td><a href="${item.video_url}" target="_blank" class="btn btn-primary" style="padding:1px 6px;font-size:0.7rem;border-radius:20px;"><i class="fas fa-play"></i></a></td>
+                            </tr>`;
+                        });
+                        tbody.innerHTML = html;
+                    }
+                } else {
+                    // [新增的區塊] 處理沒有數據的情況
+                    document.getElementById('lcVoiceScore').innerText = 'N/A';
+                    document.getElementById('lcVoiceMatch').innerText = 'N/A';
+                    document.getElementById('lcVoiceTime').innerText = 'N/A';
+                    document.getElementById('lcStressLevel').innerText = 'N/A'; // 關鍵修改
+                    document.getElementById('lcStressLevel').className = 'text-muted';
+                    document.getElementById('lcVideoListBody').innerHTML = '<tr><td colspan="4" class="text-center text-muted">尚無錄影資料</td></tr>';
+                    lcFullVideoUrl = ""; // 清空影片 URL
+                }
+            })
+            .catch(() => {});
+    }
+
+    function playFullSessionLC() {
+        if (!lcFullVideoUrl) { alert("尚未收到監控資料，請先完成面試。"); return; }
+        const modal = new bootstrap.Modal(document.getElementById('lcVideoModal'));
+        modal.show();
+        const player = document.getElementById('lcFullPlayer');
+        player.src = lcFullVideoUrl;
+        player.play();
+    }
+
+    function stopLCPlayer() {
+        const player = document.getElementById('lcFullPlayer');
+        player.pause();
+        player.src = "";
+    }
+
+    // 每 3 秒同步銀行數據
+    setInterval(fetchBankData, 3000);
+    fetchBankData();
+</script>
+
+<style>
+    :root {
+        --safe: #27ae60;
+        --warn: #f39c12;
+        --danger: #e74c3c;
+        --bg-color: #f8f9fa;
+        --primary-dark: #1e3c72;
+    }
+
+    /* 儀表板卡片 */
+    .dashboard-card {
+        background: white; border-radius: 16px;
+        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+        border: none; overflow: hidden; margin-bottom: 24px;
+        transition: transform 0.3s;
+    }
+    .dashboard-card:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12); }
+    .card-header-custom { padding: 20px 24px; border-bottom: 1px solid #e9ecef; background: white; }
+
+    /* 信任分數顯示 */
+    .trust-display {
+        text-align: center; padding: 40px 20px;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 20px; margin: 20px; position: relative; overflow: hidden;
+    }
+    .trust-display::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+        background: linear-gradient(90deg, var(--safe), var(--warn), var(--danger));
+    }
+    .trust-score-large {
+        font-size: 5rem; font-weight: 900; margin: 20px 0;
+        background: linear-gradient(135deg, var(--safe), #2ecc71);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        transition: all 0.5s ease;
+    }
+    .trust-score-large.warn { background: linear-gradient(135deg, var(--warn), #f1c40f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .trust-score-large.danger { background: linear-gradient(135deg, var(--danger), #c0392b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    /* 緊凑版信任分數 */
+    .trust-display-compact {
+        text-align: center; padding: 15px;
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 12px; position: relative;
+    }
+    .trust-score-medium {
+        font-size: 3rem; font-weight: 900; margin: 10px 0;
+        background: linear-gradient(135deg, var(--safe), #2ecc71);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        transition: all 0.5s ease;
+    }
+    .trust-score-medium.warn { background: linear-gradient(135deg, var(--warn), #f1c40f); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .trust-score-medium.danger { background: linear-gradient(135deg, var(--danger), #c0392b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+
+    .trust-level-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
+    .trust-level-1 { background: rgba(39, 174, 96, 0.15); color: var(--safe); }
+    .trust-level-2 { background: rgba(243, 156, 18, 0.15); color: var(--warn); }
+    .trust-level-3 { background: rgba(231, 76, 60, 0.15); color: var(--danger); }
+
+    /* 四大指標卡片 */
+    .metric-card {
+        padding: 20px; border-radius: 12px; margin-bottom: 16px;
+        border-left: 4px solid #ddd; background: white; transition: all 0.3s;
+    }
+    .metric-good { border-left-color: var(--safe); }
+    .metric-warn { border-left-color: var(--warn); background-color: #fffbf0; }
+    .metric-danger { border-left-color: var(--danger); background-color: #fff5f5; }
+    .metric-value { font-size: 2rem; font-weight: 800; margin-bottom: 5px; }
+    .metric-label { font-size: 0.85rem; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* 緊凑版指標卡片 */
+    .metric-card-compact {
+        padding: 10px; border-radius: 8px;
+        border-left: 3px solid #ddd; background: white;
+        text-align: center; transition: all 0.3s;
+    }
+    .metric-value-compact {
+        font-size: 1.5rem; font-weight: 700; margin-bottom: 3px;
+    }
+    .metric-label-compact {
+        font-size: 0.7rem; color: #666;
+        text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    /* 即時事件流 */
+    .event-stream { overflow-y: auto; }
+    .event-stream::-webkit-scrollbar { width: 8px; }
+    .event-stream::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 10px; }
+    .event-stream::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+    .event-stream::-webkit-scrollbar-thumb:hover { background: #555; }
+    .event-item {
+        padding: 12px 16px; border-left: 3px solid transparent; border-bottom: 1px solid #f8f9fa;
+        display: flex; align-items: center; transition: background 0.2s;
+    }
+    .event-item:hover { background: #f8f9fa; }
+    .event-micro { border-left-color: #adb5bd; color: #6c757d; font-size: 0.8rem; }
+    .event-level-1 { border-left-color: var(--safe); background: rgba(39, 174, 96, 0.05); }
+    .event-level-2 { border-left-color: var(--warn); background: rgba(243, 156, 18, 0.05); font-weight: 600; }
+    .event-level-3 { border-left-color: var(--danger); background: rgba(231, 76, 60, 0.05); color: var(--danger); font-weight: 700; }
+    .event-icon { width: 32px; text-align: center; margin-right: 12px; }
+
+    /* 心跳動畫特效 */
+    .heartbeat-indicator { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .pulse-dot { width: 12px; height: 12px; border-radius: 50%; background: #ccc; transition: all 0.2s; }
+    .pulse-dot.active { background: #00ff00; box-shadow: 0 0 10px #00ff00; }
+    .wave-container { display: flex; align-items: flex-end; height: 30px; gap: 3px; }
+    .wave-bar { width: 4px; background: #00ff00; opacity: 0.3; animation: wave 1s infinite; }
+    @keyframes wave { 0%, 100% { height: 20%; } 50% { height: 100%; } }
+
+    /* 技術規格與流程圖 */
+    .process-flow { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; position: relative; }
+    .process-step { text-align: center; z-index: 2; background: white; padding: 0 10px; width: 22%; }
+    .process-icon { width: 50px; height: 50px; background: #f8f9fa; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 10px; font-size: 1.2rem; color: var(--primary-dark); border: 2px solid #e9ecef; }
+    .process-line { position: absolute; top: 45px; left: 10%; right: 10%; height: 2px; background: #dee2e6; z-index: 1; }
+
+    .metric-explain { font-size: 0.85rem; color: #555; }
+    .metric-explain strong { color: #333; }
+    .metric-explain i { width: 20px; text-align: center; margin-right: 5px; }
+
+    /* L3 專屬動畫 */
+    .blink-badge { animation: blink 1.5s infinite; }
+    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+</style>

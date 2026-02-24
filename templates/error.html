@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>錯誤 | H-CAP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+        }
+        .error-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        .error-icon {
+            font-size: 5rem;
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-20px); }
+        }
+    </style>
+    <!-- 放在每個 HTML 檔案的 head 區塊 -->
+    <script src="{{ url_for('static', filename='js/navbar-injector.js') }}" defer></script>
+</head>
+<body>
+    <div class="container">
+        <div class="error-container text-center">
+            <!-- 錯誤圖示 -->
+            <div class="mb-4">
+                <i class="bi bi-exclamation-octagon error-icon text-danger"></i>
+            </div>
+            
+            <!-- 錯誤訊息 -->
+            <h1 class="display-4 mb-3">
+                {% if error == "頁面未找到" %}
+                    404
+                {% elif error == "伺服器內部錯誤" %}
+                    500
+                {% else %}
+                    錯誤
+                {% endif %}
+            </h1>
+            
+            <h2 class="mb-4">
+                {% if error %}
+                    {{ error }}
+                {% else %}
+                    系統發生錯誤
+                {% endif %}
+            </h2>
+            
+            <p class="lead mb-4">
+                {% if error == "頁面未找到" %}
+                    抱歉，您尋找的頁面不存在或已被移除。
+                {% elif error == "伺服器內部錯誤" %}
+                    伺服器暫時遇到問題，請稍後再試。
+                {% else %}
+                    系統處理您的請求時發生錯誤。
+                {% endif %}
+            </p>
+            
+            <!-- 技術資訊（僅在開發模式顯示） -->
+            {% if request and request.url %}
+            <div class="alert alert-info text-start mb-4">
+                <h6><i class="bi bi-bug"></i> 技術資訊：</h6>
+                <ul class="list-unstyled mb-0">
+                    <li><strong>URL：</strong> {{ request.url }}</li>
+                    <li><strong>時間：</strong> {{ now.strftime('%Y-%m-%d %H:%M:%S') if now else 'N/A' }}</li>
+                </ul>
+            </div>
+            {% endif %}
+            
+            <!-- 建議操作 -->
+            <div class="row mb-4">
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-house display-6 text-primary mb-3"></i>
+                            <h5>返回首頁</h5>
+                            <p class="card-text">回到 H-CAP 系統首頁</p>
+                            <a href="{{ url_for('index') }}" class="btn btn-primary w-100">
+                                <i class="bi bi-house"></i> 回到首頁
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <i class="bi bi-arrow-counterclockwise display-6 text-success mb-3"></i>
+                            <h5>重新整理</h5>
+                            <p class="card-text">重新載入當前頁面</p>
+                            <button onclick="location.reload()" class="btn btn-success w-100">
+                                <i class="bi bi-arrow-clockwise"></i> 重新整理
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 聯絡資訊 -->
+            <div class="alert alert-light">
+                <h6><i class="bi bi-headset"></i> 需要幫助？</h6>
+                <p class="mb-0 small">
+                    如果您持續遇到此錯誤，請聯絡系統管理員或參考
+                    <a href="{{ url_for('algorithms') }}" class="text-decoration-none">算法說明文件</a>。
+                </p>
+            </div>
+            
+            <!-- 返回按鈕 -->
+            <div class="d-grid gap-2 d-md-flex justify-content-md-center mt-4">
+                <a href="javascript:history.back()" class="btn btn-outline-secondary me-md-2">
+                    <i class="bi bi-arrow-left"></i> 返回上一頁
+                </a>
+                <a href="{{ url_for('index') }}" class="btn btn-primary">
+                    <i class="bi bi-house"></i> 首頁
+                </a>
+            </div>
+            
+            <!-- 頁尾 -->
+            <footer class="mt-5 pt-4 border-top">
+                <div class="row">
+                    <div class="col">
+                        <h5><i class="bi bi-graph-up-arrow"></i> H-CAP</h5>
+                        <p class="text-muted small">人力資本評估平台 | 錯誤頁面</p>
+                    </div>
+                    <div class="col text-end">
+                        <p class="small text-muted mb-0">
+                            版本 1.0<br>
+                            © 2023 H-CAP 金融科技團隊
+                        </p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 自動返回計時器（10秒後自動返回首頁）
+        setTimeout(function() {
+            if (confirm('10秒後未操作，是否返回首頁？')) {
+                window.location.href = "{{ url_for('index') }}";
+            }
+        }, 10000);
+        
+        // 錯誤類型特定處理
+        document.addEventListener('DOMContentLoaded', function() {
+            const errorText = document.querySelector('h2').textContent;
+            const icon = document.querySelector('.error-icon');
+            
+            // 根據錯誤類型調整圖示
+            if (errorText.includes('404') || errorText.includes('頁面未找到')) {
+                icon.className = 'bi bi-geo-alt error-icon text-warning';
+            } else if (errorText.includes('500') || errorText.includes('伺服器內部錯誤')) {
+                icon.className = 'bi bi-server error-icon text-danger';
+            }
+        });
+    </script>
+</body>
+</html>

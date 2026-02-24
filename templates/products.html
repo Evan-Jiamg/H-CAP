@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>產品模擬 | H-CAP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    
+    <script>
+        window.MathJax = {
+            tex: { inlineMath: [['$','$'], ['\\(','\\)']], displayMath: [['$$','$$'], ['\\[','\\]']] },
+            startup: { pageReady: () => MathJax.startup.defaultPageReady() }
+        };
+    </script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+
+    {% if not embedded %}
+    <script src="{{ url_for('static', filename='js/navbar-injector.js') }}" defer></script>
+    {% endif %}
+
+    <style>
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            margin: 0 auto 10px auto;
+            font-size: 1.5rem;
+        }
+        .flow-arrow { font-size: 1.5rem; color: #adb5bd; }
+        .card-header h4 { font-weight: 600; }
+        .isa-controls {
+            background-color: #e3f2fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid #90caf9;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row mb-4">
+            <div class="col-12">
+                <h1 class="display-5 fw-bold text-gradient">
+                    <i class="fas fa-calculator me-3"></i>產品模擬
+                </h1>
+                <p class="lead text-muted">
+                    基於 <span class="notranslate">H-CAP Score</span> 的動態額度與利率試算系統
+                </p>
+            </div>
+        </div>
+        
+        <div class="hcap-card mb-5 shadow-lg">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0 py-1">
+                    <i class="fas fa-cash-register me-2"></i> 數位薪資貸
+                    <span class="badge bg-white text-success float-end fs-6 mt-1">Default Rate < 1%</span>
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-lg-5 border-end pe-lg-4">
+                        <h5 class="text-success mb-3 fw-bold">✓ 核心風控優勢</h5>
+                        <ul class="list-group list-group-flush mb-4">
+                            <li class="list-group-item border-0 ps-0 py-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-3 fs-5"></i>
+                                    <div><strong class="d-block text-dark"><span class="notranslate">B2B</span> 薪資優先代扣</strong><small class="text-muted">還款日自動從企業薪資系統扣除</small></div>
+                                </div>
+                            </li>
+                            <li class="list-group-item border-0 ps-0 py-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-3 fs-5"></i>
+                                    <div><strong class="d-block text-dark">零道德風險</strong><small class="text-muted">資金不經移工之手，直接抵扣</small></div>
+                                </div>
+                            </li>
+                            <li class="list-group-item border-0 ps-0 py-2">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-check-circle text-success me-3 fs-5"></i>
+                                    <div><strong class="d-block text-dark">合法合規</strong><small class="text-muted">依《勞基法》第22條執行</small></div>
+                                </div>
+                            </li>
+                        </ul>
+                        
+                        <div class="card bg-light border-0 rounded-3">
+                            <div class="card-body text-center py-4">
+                                <h6 class="text-muted mb-4 small text-uppercase fw-bold">Transaction Flow</h6>
+                                <div class="d-flex justify-content-between align-items-center px-2">
+                                    <div class="text-center position-relative">
+                                        <div class="feature-icon bg-success text-white shadow-sm"><i class="fas fa-bank" style="font-size: 1.2rem;"></i></div>
+                                        <span class="small fw-bold d-block">Bank</span>
+                                    </div>
+                                    <i class="fas fa-arrow-right flow-arrow"></i>
+                                    <div class="text-center position-relative">
+                                        <div class="feature-icon bg-primary text-white shadow-sm"><i class="fas fa-building" style="font-size: 1.2rem;"></i></div>
+                                        <span class="small fw-bold d-block">Employer</span>
+                                    </div>
+                                    <i class="fas fa-arrow-right flow-arrow"></i>
+                                    <div class="text-center position-relative">
+                                        <div class="feature-icon bg-info text-white shadow-sm"><i class="fas fa-file-invoice-dollar" style="font-size: 1.2rem;"></i></div>
+                                        <span class="small fw-bold d-block">Deduct</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-7 ps-lg-4 mt-4 mt-lg-0">
+                        <div class="bg-white p-2">
+                            <div class="mb-4">
+                                <label for="loanAmount" class="form-label d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold fs-5"><i class="fas fa-coins me-2 text-warning"></i>申請金額</span>
+                                    <span class="text-primary fw-bold fs-4">NT$ <span id="amountValue">{{ client.loan_recommendation.survival_loan.max_amount | intcomma }}</span></span>
+                                </label>
+                                <input type="range" class="form-range" id="loanAmount" min="10000" max="50000" step="5000" value="{{ client.loan_recommendation.survival_loan.max_amount }}">
+                                <div class="d-flex justify-content-between small text-muted"><span>10,000</span><span>50,000</span></div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="loanTerm" class="form-label d-flex justify-content-between align-items-center">
+                                    <span class="fw-bold fs-5"><i class="fas fa-calendar-alt me-2 text-info"></i>貸款期限</span>
+                                    <span class="text-primary fw-bold fs-4"><span id="termValue">{{ client.loan_recommendation.survival_loan.term }}</span> <span class="fs-6">個月</span></span>
+                                </label>
+                                <input type="range" class="form-range" id="loanTerm" min="6" max="24" step="6" value="{{ client.loan_recommendation.survival_loan.term }}">
+                                <div class="d-flex justify-content-between small text-muted"><span>6 Months</span><span>24 Months</span></div>
+                            </div>
+                            
+                            <div id="loanResult" class="alert alert-success border-0 shadow-sm rounded-3 p-4">
+                                <div class="row text-center align-items-center">
+                                    <div class="col-6 border-end">
+                                        <p class="mb-1 text-muted fw-bold small text-uppercase">每月還款</p>
+                                        <h2 class="text-success fw-bold mb-0" id="monthlyPayment">--</h2>
+                                    </div>
+                                    <div class="col-6">
+                                        <p class="mb-1 text-muted fw-bold small text-uppercase">年利率</p>
+                                        <h2 class="text-success fw-bold mb-0" id="interestRate">--</h2>
+                                    </div>
+                                </div>
+                                <hr class="my-3">
+                                <div class="text-center">
+                                    <span id="dbrStatusIcon" class="me-2"><i class="fas fa-check-circle fs-5"></i></span>
+                                    <span id="dbrMessage" class="fw-bold fs-5">計算中...</span>
+                                    <span class="small text-muted ms-2">(<span class="notranslate">DBR</span>: <span id="dbrValue">--</span>%)</span>
+                                </div>
+                            </div>
+                            
+                            <button class="btn btn-success w-100 py-3 fw-bold fs-5 shadow-sm" id="calculateLoan">
+                                <i class="fas fa-calculator me-2"></i> 重新計算
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion mt-4 border-top pt-4" id="formulaAccordion">
+                    <div class="accordion-item border-0 overflow-hidden rounded-3 shadow-sm">
+                        <h2 class="accordion-header" id="headingFormula">
+                            <button class="accordion-button collapsed bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFormula" aria-expanded="false">
+                                <i class="fas fa-info-circle text-primary me-2"></i> <strong>查看計算公式與風險定價邏輯</strong>
+                            </button>
+                        </h2>
+                        <div id="collapseFormula" class="accordion-collapse collapse" aria-labelledby="headingFormula" data-bs-parent="#formulaAccordion">
+                            <div class="accordion-body bg-white">
+                                <div class="row g-4">
+                                    <div class="col-md-6 border-end">
+                                        <h6 class="text-primary mb-3 fw-bold">1. 本息平均攤還公式 (<span class="notranslate">PMT</span>)</h6>
+                                        <div class="p-4 bg-light rounded-3 text-center mb-3">\[ PMT = P \times \frac{r(1+r)^n}{(1+r)^n - 1} \]</div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6 class="text-primary mb-3 fw-bold">2. 風險分級定價表</h6>
+                                        <table class="table table-bordered text-center small align-middle">
+                                            <thead class="table-light"><tr><th>貸款金額</th><th>年利率</th><th>Risk Level</th></tr></thead>
+                                            <tbody>
+                                                <tr><td>10k - 30k</td><td class="text-success fw-bold">10.5%</td><td><span class="badge bg-success">Low</span></td></tr>
+                                                <tr><td>30k - 40k</td><td class="text-primary fw-bold">12.5%</td><td><span class="badge bg-primary">Mid</span></td></tr>
+                                                <tr><td>40k - 50k</td><td class="text-warning fw-bold">15.0%</td><td><span class="badge bg-warning text-dark">High</span></td></tr>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="hcap-card shadow-lg">
+            <div class="card-header bg-info text-white">
+                <h4 class="mb-0 py-1">
+                    <i class="fas fa-graduation-cap me-2"></i>
+                    職涯投資選擇權 (<span class="notranslate">ISA</span>)
+                    <span class="badge bg-white text-info float-end fs-6 mt-1">創新人力資本投資</span>
+                </h4>
+            </div>
+            <div class="card-body p-4">
+                <div class="row mb-4">
+                    <div class="col-lg-6 mb-4 mb-lg-0">
+                        <div class="card h-100 border-info border-opacity-25 bg-info bg-opacity-10">
+                            <div class="card-body">
+                                <h5 class="text-info fw-bold mb-3">🎯 收入分潤協議</h5>
+                                <p class="card-text text-dark">
+                                    <strong>零債務起點：</strong>銀行代墊培訓費，分階段撥款給機構。<br>
+                                    <strong>風險豁免：</strong>若未考取證照，僅需攤還 1.5 萬基本費，其餘學費由銀行吸收。
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-6">
+                        <h5 class="text-info fw-bold mb-3">🛡️ 風險對沖機制</h5>
+                        <p class="small text-muted mb-4">
+                            資金不經移工之手，隨培訓進度<strong>分期撥款(註:可在首期舉行前測，未通過者則不予核准)</strong>，若中途放棄即刻止損。
+                        </p>
+                        <div class="row text-center g-2">
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light h-100">
+                                    <div class="text-warning mb-2"><i class="fas fa-coins fa-2x"></i></div>
+                                    <h6 class="small fw-bold mb-0">保證金</h6>
+                                    <small class="text-muted d-block" style="font-size:0.7rem">10% Deposit</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light h-100">
+                                    <div class="text-primary mb-2"><i class="fas fa-step-forward fa-2x"></i></div>
+                                    <h6 class="small fw-bold mb-0">分期撥款</h6>
+                                    <small class="text-muted d-block" style="font-size:0.7rem">Phased Payment</small>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-3 border rounded bg-light h-100">
+                                    <div class="text-success mb-2"><i class="fas fa-sync-alt fa-2x"></i></div>
+                                    <h6 class="small fw-bold mb-0">風險豁免</h6>
+                                    <small class="text-muted d-block" style="font-size:0.7rem">Fee Waiver</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <hr class="my-4">
+                
+                <div class="isa-controls">
+                    <div class="row align-items-center">
+                        <div class="col-md-3">
+                            <label class="form-label fw-bold mb-0"><i class="fas fa-chart-line me-2"></i>考取後薪資漲幅(與雇主簽訂合同)</label>
+                        </div>
+                        <div class="col-md-5">
+                            <input type="range" class="form-range" id="salaryIncrease" min="20000" max="40000" step="1000" value="30000">
+                            <div class="d-flex justify-content-between small text-muted"><span>+20k</span><span>+30k</span><span>+40k</span></div>
+                        </div>
+                        <div class="col-md-2 text-center border-start border-end">
+                            <small class="text-muted d-block">預估增幅</small>
+                            <span class="text-primary fw-bold fs-5">+NT$ <span id="increaseVal">30,000</span></span>
+                        </div>
+                        <div class="col-md-2 text-center">
+                            <small class="text-muted d-block">銀行分潤</small>
+                            <span class="text-danger fw-bold fs-5">60%</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row mb-3 align-items-center">
+                    <div class="col-md-12">
+                        <div class="btn-group w-100" role="group">
+                            <button type="button" class="btn btn-outline-success active" id="btnSuccess" onclick="changeScenario('success')">
+                                <i class="fas fa-trophy me-1"></i> 成功 (高回報)
+                            </button>
+                            <button type="button" class="btn btn-outline-warning" id="btnJob" onclick="changeScenario('fail_with_job')">
+                                <i class="fas fa-briefcase me-1"></i> 未考上 (減免/分期)
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" id="btnFail" onclick="changeScenario('fail_dropout')">
+                                <i class="fas fa-door-open me-1"></i> 中途放棄 (止損)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-lg-8">
+                        <div class="chart-container border rounded p-3 bg-light" style="height: 300px;">
+                            <canvas id="isaChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="col-lg-4 d-flex flex-column">
+                        <div class="card bg-light border-0 h-100 justify-content-center">
+                            <div class="card-body text-center">
+                                <h6 id="scenarioTitle" class="text-muted mb-3 fw-bold">情境分析</h6>
+                                
+                                <div class="mb-4">
+                                    <small class="text-muted d-block mb-1"><span class="notranslate">IRR</span> (內部報酬率)</small>
+                                    <h1 class="text-primary fw-bold mb-0" id="irrValue">--%</h1>
+                                </div>
+                                
+                                <div class="border-top pt-3">
+                                    <small class="text-muted d-block mb-1">銀行總回收</small>
+                                    <h3 class="text-success fw-bold mb-0" id="totalReturn">NT$ --</h3>
+                                </div>
+                                
+                                <div id="monthlyRepayBox" class="mt-3 bg-white rounded p-2 border d-none">
+                                    <small class="text-muted">移工每月還款</small>
+                                    <div class="fw-bold text-danger">NT$ <span id="monthlyRepayVal">--</span></div>
+                                    <small id="repayStatus" class="d-block text-muted" style="font-size: 0.7rem;">(分潤)</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer-hcap mt-5 bg-dark text-white py-4">
+        <div class="container text-center">
+            <p>台灣金融科技創新競賽作品 | © 2026 <span class="notranslate">H-CAP</span> Team</p>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loanAmount = document.getElementById('loanAmount');
+            const loanTerm = document.getElementById('loanTerm');
+            
+            loanAmount.addEventListener('input', updateLoanValues);
+            loanTerm.addEventListener('input', updateLoanValues);
+            document.getElementById('calculateLoan').addEventListener('click', calculateLoan);
+
+            function updateLoanValues() {
+                document.getElementById('amountValue').textContent = parseInt(loanAmount.value).toLocaleString();
+                document.getElementById('termValue').textContent = loanTerm.value;
+                calculateLoan();
+            }
+            
+            function calculateLoan() {
+                fetch('/api/calculate_loan', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ amount: parseInt(loanAmount.value), term: parseInt(loanTerm.value) })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('monthlyPayment').textContent = 'NT$ ' + data.monthly_payment.toLocaleString();
+                    document.getElementById('interestRate').textContent = data.interest_rate + '%';
+                    document.getElementById('dbrValue').textContent = data.dbr;
+                    
+                    const resultBox = document.getElementById('loanResult');
+                    const statusIcon = document.getElementById('dbrStatusIcon');
+                    const msgEl = document.getElementById('dbrMessage');
+                    
+                    if (data.dbr < 30) {
+                        resultBox.className = 'alert alert-success border-0 shadow-sm rounded-3 p-4';
+                        statusIcon.innerHTML = '<i class="fas fa-check-circle fs-5"></i>';
+                        statusIcon.className = "me-2 text-success";
+                        msgEl.textContent = '符合核貸條件';
+                        msgEl.className = 'fw-bold fs-5 text-success';
+                    } else {
+                        resultBox.className = 'alert alert-danger border-0 shadow-sm rounded-3 p-4';
+                        statusIcon.innerHTML = '<i class="fas fa-exclamation-circle fs-5"></i>';
+                        statusIcon.className = "me-2 text-danger";
+                        msgEl.textContent = 'DBR過高，建議降低額度';
+                        msgEl.className = 'fw-bold fs-5 text-danger';
+                    }
+                });
+            }
+            calculateLoan();
+        });
+
+        let isaChart = null;
+        let currentScenario = 'success'; 
+
+        function changeScenario(scenario) {
+            currentScenario = scenario;
+            document.querySelectorAll('.btn-group .btn').forEach(btn => btn.classList.remove('active'));
+            if(scenario === 'success') document.getElementById('btnSuccess').classList.add('active');
+            if(scenario === 'fail_with_job') document.getElementById('btnJob').classList.add('active');
+            if(scenario === 'fail_dropout') document.getElementById('btnFail').classList.add('active');
+            loadIsaData();
+        }
+
+        document.getElementById('salaryIncrease').addEventListener('input', function() {
+            const val = parseInt(this.value);
+            document.getElementById('increaseVal').textContent = val.toLocaleString();
+            if (currentScenario !== 'success') changeScenario('success');
+            else loadIsaData();
+        });
+
+        function loadIsaData() {
+            const increase = document.getElementById('salaryIncrease').value;
+            fetch(`/api/calculate_isa_scenario/${currentScenario}?increase=${increase}`)
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('totalReturn').textContent = 'NT$ ' + data.total_return.toLocaleString();
+                    document.getElementById('scenarioTitle').textContent = data.description;
+                    const irrEl = document.getElementById('irrValue');
+                    irrEl.textContent = data.irr + '%';
+                    
+                    if (data.irr > 0) irrEl.className = 'text-success fw-bold mb-0 display-4';
+                    else if (data.irr === 0) irrEl.className = 'text-warning fw-bold mb-0 display-4';
+                    else irrEl.className = 'text-danger fw-bold mb-0 display-4';
+                    
+                    const repayBox = document.getElementById('monthlyRepayBox');
+                    const repayVal = document.getElementById('monthlyRepayVal');
+                    const repayStatus = document.getElementById('repayStatus');
+                    
+                    if (data.details && data.details.monthly_pay !== undefined) {
+                        repayBox.classList.remove('d-none');
+                        repayVal.textContent = data.details.monthly_pay.toLocaleString();
+                        repayStatus.textContent = `(${data.details.status || '還款'})`;
+                        
+                        if(currentScenario === 'success') repayVal.className = 'fw-bold text-success';
+                        else repayVal.className = 'fw-bold text-muted';
+                    } else {
+                        repayBox.classList.add('d-none');
+                    }
+
+                    updateChart(data.bank_cashflow);
+                });
+        }
+        
+        function updateChart(cashflow) {
+            const ctx = document.getElementById('isaChart').getContext('2d');
+            if (isaChart) isaChart.destroy();
+            
+            // 標籤邏輯：前三個是分期撥款 (T0~T2)，後面是回收期 (M1...)
+            const labels = cashflow.map((_, i) => {
+                if (i < 3) return `T${i}撥款`;
+                return `M${i-2}`;
+            });
+            
+            isaChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '銀行現金流 (NT$)',
+                        data: cashflow,
+                        backgroundColor: cashflow.map(v => {
+                            if (v > 0) return '#1cc88a'; // 回收 (綠)
+                            if (v < 0) return '#e74c3c'; // 撥款 (紅)
+                            return '#858796'; // 0 (灰)
+                        }),
+                        borderRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: '#f8f9fa' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+        loadIsaData();
+    </script>
+</body>
+</html>

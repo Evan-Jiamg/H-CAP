@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>雇主資料管理 | H-CAP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { background: #f8f9fa; padding-top: 2rem; padding-bottom: 3rem; }
+        .back-buttons-group {
+            position: fixed; top: 20px; left: 20px; z-index: 1000;
+            display: flex; gap: 10px;
+        }
+        .back-button {
+            background: white; border: 2px solid #dee2e6; border-radius: 8px;
+            padding: 10px 20px; text-decoration: none; color: #495057;
+            font-weight: 600; box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s ease; display: flex; align-items: center; gap: 0.5rem;
+        }
+        .back-button:hover {
+            background: #f8f9fa; color: #212529;
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .page-title-section {
+            background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+            border-radius: 16px;
+            padding: 1.4rem 2rem;
+            margin-bottom: 1.8rem;
+            box-shadow: 0 8px 30px rgba(30, 41, 59, 0.3);
+        }
+        .page-title {
+            color: white;
+            text-align: center;
+            margin-bottom: 0;
+        }
+        .page-title h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+        .page-title p {
+            opacity: 0.85;
+            font-size: 0.95rem;
+            margin-bottom: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="back-buttons-group">
+        <a href="/portal/bank" class="back-button">
+            <i class="fas fa-arrow-left me-2"></i>返回銀行端管理平台
+        </a>
+        <a href="/" class="back-button">
+            <i class="fas fa-home me-2"></i>首頁
+        </a>
+    </div>
+
+    <div class="container">
+        <div class="page-title-section">
+            <div class="page-title">
+                <h1><i class="fas fa-building me-2"></i>雇主資料管理</h1>
+                <p>管理正式雇主與待確認雇主資料</p>
+            </div>
+        </div>
+        <!-- 篩選列 + 新增按鈕 -->
+        <div class="card shadow-sm mb-3" style="border-radius: 12px;">
+            <div class="card-body py-2 px-3">
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <span class="fw-bold small text-muted me-2"><i class="fas fa-filter me-1"></i>篩選：</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button class="btn btn-outline-secondary active emp-filter-rating" data-rating="all" onclick="filterEmployers(event)">全部</button>
+                        <button class="btn btn-outline-success emp-filter-rating" data-rating="AA" onclick="filterEmployers(event)">AA</button>
+                        <button class="btn btn-outline-primary emp-filter-rating" data-rating="A" onclick="filterEmployers(event)">A</button>
+                        <button class="btn btn-outline-warning emp-filter-rating" data-rating="B" onclick="filterEmployers(event)">B</button>
+                        <button class="btn btn-outline-danger emp-filter-rating" data-rating="C" onclick="filterEmployers(event)">C</button>
+                    </div>
+                    <select class="form-select form-select-sm" id="empIndustryFilter" onchange="renderEmployers()" style="width: auto; min-width: 120px;">
+                        <option value="all">全部產業</option>
+                        <option value="電子製造">電子製造</option>
+                        <option value="半導體">半導體</option>
+                        <option value="傳統製造">傳統製造</option>
+                    </select>
+                    <span class="badge bg-secondary" id="empCountBadge">--</span>
+                    <button class="btn btn-sm text-white fw-bold ms-auto" style="background: linear-gradient(135deg, #334155, #1e293b);" onclick="showAddModal()">
+                        <i class="fas fa-plus me-1"></i>新增雇主
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 正式雇主列表 -->
+        <div class="card shadow-sm mb-4" style="border-radius: 12px;">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: linear-gradient(135deg, #334155, #1e293b); color: white; border-radius: 12px 12px 0 0;">
+                <h6 class="mb-0"><i class="fas fa-check-circle me-2"></i>正式雇主資料</h6>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:5%">#</th>
+                                <th>公司名稱</th>
+                                <th style="width:10%">評級</th>
+                                <th style="width:13%">產業別</th>
+                                <th style="width:10%">員工數</th>
+                                <th style="width:10%">展望</th>
+                                <th style="width:12%">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="confirmedBody">
+                            <tr><td colspan="7" class="text-center text-muted py-3">載入中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 待確認雇主列表 -->
+        <div class="card shadow-sm mb-4" style="border-radius: 12px;">
+            <div class="card-header d-flex justify-content-between align-items-center" style="background: #f59e0b; color: white; border-radius: 12px 12px 0 0;">
+                <h6 class="mb-0"><i class="fas fa-clock me-2"></i>待確認雇主資料</h6>
+                <span class="badge bg-white text-dark" id="pendingCount">0</span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0 align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:5%">#</th>
+                                <th>公司名稱</th>
+                                <th style="width:15%">提交時間</th>
+                                <th style="width:30%">確認操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pendingBody">
+                            <tr><td colspan="4" class="text-center text-muted py-3">目前無待確認雇主</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div style="height: 2rem;"></div>
+    </div>
+
+    <!-- 新增雇主 Modal -->
+    <div class="modal fade" id="addModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #334155, #1e293b); color: white; border-radius: 16px 16px 0 0;">
+                    <h6 class="modal-title"><i class="fas fa-plus-circle me-2"></i>新增雇主</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">公司名稱</label>
+                        <input type="text" class="form-control" id="addName" placeholder="請輸入公司名稱" required>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">評級</label>
+                            <select class="form-select" id="addRating">
+                                <option value="AA">AA</option><option value="A" selected>A</option><option value="B">B</option><option value="C">C</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">產業別</label>
+                            <select class="form-select" id="addIndustry">
+                                <option value="電子製造">電子製造</option><option value="半導體">半導體</option><option value="傳統製造">傳統製造</option><option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">員工數</label>
+                            <input type="number" class="form-control" id="addEmployees" value="50">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">雇主類型</label>
+                            <select class="form-select" id="addType">
+                                <option value="large_tech">大型科技廠</option><option value="medium_tech" selected>中型電子廠</option><option value="small_factory">傳統中小企業</option><option value="caregiver">家庭看護</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">展望</label>
+                            <select class="form-select" id="addOutlook">
+                                <option value="穩定">穩定</option><option value="保守">保守</option><option value="待評估" selected>待評估</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn text-white" style="background: linear-gradient(135deg, #334155, #1e293b);" onclick="submitAdd()">確認新增</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 修改雇主 Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #334155, #1e293b); color: white; border-radius: 16px 16px 0 0;">
+                    <h6 class="modal-title"><i class="fas fa-edit me-2"></i>修改雇主資料</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="editId">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">公司名稱</label>
+                        <input type="text" class="form-control" id="editName">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label fw-bold">評級</label>
+                            <select class="form-select" id="editRating">
+                                <option value="AA">AA</option><option value="A">A</option><option value="B">B</option><option value="C">C</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">產業別</label>
+                            <select class="form-select" id="editIndustry">
+                                <option value="電子製造">電子製造</option><option value="半導體">半導體</option><option value="傳統製造">傳統製造</option><option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">員工數</label>
+                            <input type="number" class="form-control" id="editEmployees">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label fw-bold">雇主類型</label>
+                            <select class="form-select" id="editType">
+                                <option value="large_tech">大型科技廠</option><option value="medium_tech">中型電子廠</option><option value="small_factory">傳統中小企業</option><option value="caregiver">家庭看護</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label fw-bold">展望</label>
+                            <select class="form-select" id="editOutlook">
+                                <option value="穩定">穩定</option><option value="保守">保守</option><option value="待評估">待評估</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn text-white" style="background: linear-gradient(135deg, #334155, #1e293b);" onclick="submitEdit()">儲存修改</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 覆寫確認 Modal -->
+    <div class="modal fade" id="overwriteModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #b45309, #92400e); color: white; border-radius: 16px 16px 0 0;">
+                    <h6 class="modal-title"><i class="fas fa-exclamation-triangle me-2"></i>公司名稱重複，確認覆寫？</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-warning mb-3" style="border-radius: 10px;">
+                        <strong id="overwriteCompanyName"></strong> 已存在於正式雇主資料中。
+                    </div>
+                    <p class="mb-1">確認後將以 <strong>待確認雇主資料</strong> 的內容完整覆寫既有紀錄，包含：</p>
+                    <ul class="mb-0 text-muted small">
+                        <li>評級、產業別、雇主類型、展望</li>
+                        <li>所有關聯客戶的 H-CAP 分數將重新計算</li>
+                    </ul>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="button" class="btn btn-warning text-white fw-bold" id="overwriteConfirmBtn"><i class="fas fa-check me-1"></i>確認覆寫</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    let allData = { confirmed: [], pending: [] };
+    let ratingFilter = 'all';
+
+    function load() {
+        fetch('/api/employers').then(r => r.json()).then(d => { allData = d; renderEmployers(); });
+    }
+
+    function badge(r) {
+        const m = { 'AA': 'bg-success', 'A': 'bg-primary', 'B': 'bg-warning text-dark', 'C': 'bg-danger', '--': 'bg-secondary' };
+        return `<span class="badge ${m[r] || 'bg-secondary'} px-2">${r}</span>`;
+    }
+
+    function renderEmployers() {
+        const ind = document.getElementById('empIndustryFilter').value;
+        let list = allData.confirmed;
+        if (ratingFilter !== 'all') list = list.filter(e => e.rating === ratingFilter);
+        if (ind !== 'all') list = list.filter(e => e.industry === ind);
+        document.getElementById('empCountBadge').textContent = list.length + ' 間雇主';
+
+        const tb = document.getElementById('confirmedBody');
+        if (!list.length) {
+            tb.innerHTML = '<tr><td colspan="7" class="text-center text-muted py-3">無符合條件的雇主</td></tr>';
+        } else {
+            tb.innerHTML = list.map((e, i) => `
+                <tr>
+                    <td class="text-muted small">${i+1}</td>
+                    <td class="fw-bold">${e.name}</td>
+                    <td>${badge(e.rating)}</td>
+                    <td class="small">${e.industry}</td>
+                    <td class="small">${e.employees || '--'}</td>
+                    <td class="small">${e.outlook || '--'}</td>
+                    <td>
+                        <button class="btn btn-outline-primary btn-sm me-1" onclick='openEdit(${JSON.stringify(e)})' style="font-size:0.7rem;padding:2px 8px;"><i class="fas fa-pen"></i></button>
+                        <button class="btn btn-outline-danger btn-sm" onclick="del('${e.id}')" style="font-size:0.7rem;padding:2px 8px;"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>`).join('');
+        }
+
+        const pb = document.getElementById('pendingBody');
+        const plist = allData.pending;
+        document.getElementById('pendingCount').textContent = plist.length;
+        if (!plist.length) {
+            pb.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">目前無待確認雇主</td></tr>';
+        } else {
+            pb.innerHTML = plist.map((e, i) => `
+                <tr>
+                    <td class="text-muted small">${i+1}</td>
+                    <td><input type="text" class="form-control form-control-sm fw-bold" id="pN_${e.id}" value="${e.name}" style="min-width:130px;font-size:0.85rem;"></td>
+                    <td class="small text-muted">${e.submitted_at || '--'}</td>
+                    <td>
+                        <div class="d-flex gap-1 align-items-center flex-wrap">
+                            <select class="form-select form-select-sm" style="width:70px;font-size:0.75rem;" id="pR_${e.id}">
+                                <option value="AA">AA</option><option value="A" selected>A</option><option value="B">B</option><option value="C">C</option>
+                            </select>
+                            <select class="form-select form-select-sm" style="width:90px;font-size:0.75rem;" id="pI_${e.id}">
+                                <option value="電子製造">電子製造</option><option value="半導體">半導體</option><option value="傳統製造">傳統製造</option><option value="其他">其他</option>
+                            </select>
+                            <select class="form-select form-select-sm" style="width:100px;font-size:0.75rem;" id="pT_${e.id}">
+                                <option value="large_tech">大型科技廠</option><option value="medium_tech" selected>中型電子廠</option><option value="small_factory">傳統中小</option><option value="caregiver">家庭看護</option>
+                            </select>
+                            <select class="form-select form-select-sm" style="width:80px;font-size:0.75rem;" id="pO_${e.id}">
+                                <option value="穩定">穩定</option><option value="保守" selected>保守</option><option value="待評估">待評估</option>
+                            </select>
+                            <button class="btn btn-success btn-sm" onclick="confirm_emp('${e.id}')" style="font-size:0.75rem;white-space:nowrap;"><i class="fas fa-check me-1"></i>確認</button>
+                            <button class="btn btn-outline-danger btn-sm" onclick="del('${e.id}')" style="font-size:0.7rem;padding:2px 6px;"><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>`).join('');
+        }
+    }
+
+    function filterEmployers(ev) {
+        const btn = ev.target.closest('.emp-filter-rating');
+        if (btn) {
+            document.querySelectorAll('.emp-filter-rating').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            ratingFilter = btn.dataset.rating;
+        }
+        renderEmployers();
+    }
+
+    function showAddModal() {
+        document.getElementById('addName').value = '';
+        new bootstrap.Modal(document.getElementById('addModal')).show();
+    }
+
+    function submitAdd() {
+        const name = document.getElementById('addName').value.trim();
+        if (!name) { alert('請輸入公司名稱'); return; }
+        fetch('/api/employers/add', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name, rating: document.getElementById('addRating').value,
+                industry: document.getElementById('addIndustry').value,
+                employees: parseInt(document.getElementById('addEmployees').value) || 0,
+                type: document.getElementById('addType').value,
+                outlook: document.getElementById('addOutlook').value
+            })
+        }).then(r => r.json()).then(d => {
+            if (d.success) { bootstrap.Modal.getInstance(document.getElementById('addModal')).hide(); load(); }
+            else alert(d.error || '新增失敗');
+        });
+    }
+
+    function openEdit(emp) {
+        document.getElementById('editId').value = emp.id;
+        document.getElementById('editName').value = emp.name;
+        document.getElementById('editRating').value = emp.rating;
+        document.getElementById('editIndustry').value = emp.industry;
+        document.getElementById('editEmployees').value = emp.employees || 0;
+        document.getElementById('editType').value = emp.type || 'medium_tech';
+        document.getElementById('editOutlook').value = emp.outlook || '待評估';
+        new bootstrap.Modal(document.getElementById('editModal')).show();
+    }
+
+    function submitEdit() {
+        const id = document.getElementById('editId').value;
+        fetch('/api/employers/edit', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id, name: document.getElementById('editName').value.trim(),
+                rating: document.getElementById('editRating').value,
+                industry: document.getElementById('editIndustry').value,
+                employees: parseInt(document.getElementById('editEmployees').value) || 0,
+                type: document.getElementById('editType').value,
+                outlook: document.getElementById('editOutlook').value
+            })
+        }).then(r => r.json()).then(d => {
+            if (d.success) { bootstrap.Modal.getInstance(document.getElementById('editModal')).hide(); load(); }
+            else alert(d.error || '修改失敗');
+        });
+    }
+
+    function doConfirmEmp(id, name, overwrite) {
+        fetch('/api/employers/confirm', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id, name, overwrite,
+                rating: document.getElementById('pR_' + id).value,
+                industry: document.getElementById('pI_' + id).value,
+                type: document.getElementById('pT_' + id).value,
+                outlook: document.getElementById('pO_' + id).value
+            })
+        }).then(r => r.json()).then(d => { if (d.success) load(); else alert(d.error); });
+    }
+
+    function confirm_emp(id) {
+        const nameEl = document.getElementById('pN_' + id);
+        const name = nameEl ? nameEl.value.trim() : '';
+        if (!name) { alert('公司名稱不得為空'); nameEl && nameEl.focus(); return; }
+
+        // 檢查是否與正式雇主重名
+        const dup = allData.confirmed.find(e => e.name.trim().toLowerCase() === name.toLowerCase());
+        if (dup) {
+            // 顯示覆寫確認 Modal
+            document.getElementById('overwriteCompanyName').textContent = `「${name}」`;
+            const modal = new bootstrap.Modal(document.getElementById('overwriteModal'));
+            const btn = document.getElementById('overwriteConfirmBtn');
+            // 移除舊的 listener，避免重複綁定
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', function () {
+                modal.hide();
+                doConfirmEmp(id, name, true);
+            });
+            modal.show();
+        } else {
+            doConfirmEmp(id, name, false);
+        }
+    }
+
+    function del(id) {
+        if (!confirm('確定要刪除此雇主？')) return;
+        fetch('/api/employers/delete', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id })
+        }).then(r => r.json()).then(d => { if (d.success) load(); else alert(d.error || '刪除失敗'); })
+          .catch(() => alert('刪除請求失敗'));
+    }
+
+    document.addEventListener('DOMContentLoaded', load);
+    </script>
+</body>
+</html>

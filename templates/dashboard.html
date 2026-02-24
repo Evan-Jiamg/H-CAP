@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客戶信用畫像 | H-CAP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
+    <!-- 放在每個 HTML 檔案的 head 區塊 -->
+    <script src="{{ url_for('static', filename='js/navbar-injector.js') }}" defer></script>
+</head>
+<body>
+    <!-- 統一的導航列（嵌入模式下隱藏）-->
+    {% if not embedded %}
+    <nav class="navbar navbar-expand-lg navbar-hcap">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="bi bi-graph-up-arrow"></i> H-CAP
+            </a>
+            <div class="navbar-nav">
+                <a class="nav-link" href="{{ url_for('index') }}">首頁</a>
+                <a class="nav-link" href="{{ url_for('algorithms') }}">算法說明</a>
+                <a class="nav-link" href="{{ url_for('portal_bank') }}">客戶列表</a>
+                <a class="nav-link active" href="{{ url_for('dashboard') }}?client={{ client_id }}">客戶畫像</a>
+                <a class="nav-link" href="{{ url_for('products') }}?client={{ client_id }}">產品模擬</a>
+                <a class="nav-link" href="{{ url_for('lifecycle') }}?client={{ client_id }}">風控監控</a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="container-fluid {% if not embedded %}py-4{% else %}pt-2{% endif %}">
+        <!-- 客戶選擇器（如果是自定義客戶，且非嵌入模式） -->
+        {% if client_id == 'custom' and not embedded %}
+        <div class="alert alert-info mb-4">
+            <i class="bi bi-person-badge"></i>
+            目前顯示：<strong>自定義客戶</strong> - {{ client.name }}
+            <a href="{{ url_for('index') }}" class="float-end btn btn-sm btn-outline-primary">
+                <i class="bi bi-arrow-left"></i> 返回創建新客戶
+            </a>
+        </div>
+        {% endif %}
+        
+        <div class="row">
+            <!-- 左側：客戶基本資料 -->
+            <div class="col-md-3">
+                <div class="card shadow-sm mb-4 hcap-card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-person-circle"></i> 客戶檔案
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <i class="bi bi-person-bounding-box display-1 text-primary"></i>
+                        </div>
+                        <h4>{{ client.name }}</h4>
+                        <p class="text-muted">{{ client.country }}籍 • {{ client.age }}歲</p>
+                        
+                        <hr>
+                        
+                        <div class="text-start">
+                            <p><strong><i class="bi bi-briefcase"></i> 雇主：</strong><br>{{ client.employer }}</p>
+                            <p><strong><i class="bi bi-card-text"></i> 職位：</strong><br>{{ client.job_title }}</p>
+                            <p><strong><i class="bi bi-calendar"></i> 合約剩餘：</strong><br>{{ client.contract_remaining }} 個月</p>
+                            <p><strong><i class="bi bi-cash-stack"></i> 平均月薪：</strong><br>NT$ {{ client.salary_data.total | average | intcomma }}</p>
+                        </div>
+                        
+                        <div class="alert 
+                            {% if client.hcap_score >= 750 %}alert-primary
+                            {% elif client.hcap_score >= 700 %}alert-success
+                            {% elif client.hcap_score >= 650 %}alert-warning
+                            {% else %}alert-danger{% endif %} mt-3">
+                            <h1 class="display-4 fw-bold">{{ client.hcap_score }}</h1>
+                            <p class="mb-0">H-CAP Score</p>
+                            <small class="text-muted">850分滿分制</small>
+                        </div>
+                        
+                        <!-- 分數說明 -->
+                        <div class="alert alert-light mt-2 small">
+                            <strong>評分標準：</strong><br>
+                            <span class="badge bg-primary">750+：低風險</span>
+                            <span class="badge bg-success">700+：中低風險</span>
+                            <span class="badge bg-warning">650+：中高風險</span>
+                            <span class="badge bg-danger">&lt;650：高風險</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 快速核貸建議 -->
+                <div class="card shadow-sm hcap-card">
+                    <div class="card-header bg-success text-white">
+                        <i class="bi bi-check-circle"></i> 核貸建議
+                    </div>
+                    <div class="card-body">
+                        {% if client.loan_recommendation.survival_loan.approved %}
+                        <div class="alert alert-success">
+                            <h6><i class="bi bi-check-circle-fill"></i> 數位薪資貸</h6>
+                            <p class="mb-1">核准額度：NT$ {{ client.loan_recommendation.survival_loan.max_amount | intcomma }}</p>
+                            <small class="text-muted">年利率 {{ client.loan_recommendation.survival_loan.interest_rate }}% • 期限 {{ client.loan_recommendation.survival_loan.term }}個月</small>
+                        </div>
+                        {% else %}
+                        <div class="alert alert-danger">
+                            <h6><i class="bi bi-x-circle-fill"></i> 數位薪資貸</h6>
+                            <p class="mb-1">暫緩核貸</p>
+                            <small class="text-muted">{{ client.loan_recommendation.survival_loan.reason }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        {% if client.loan_recommendation.isa.qualified %}
+                        <div class="alert alert-info">
+                            <h6><i class="bi bi-graph-up-arrow"></i> 職涯投資選擇權 (ISA)</h6>
+                            <p class="mb-1">符合資格：{{ client.loan_recommendation.isa.training_field }}</p>
+                            <small class="text-muted">預期薪資增幅：NT$ {{ client.loan_recommendation.isa.expected_salary_increase | intcomma }}/月</small>
+                        </div>
+                        {% elif client.loan_recommendation.isa.reason %}
+                        <div class="alert alert-warning">
+                            <h6><i class="bi bi-exclamation-triangle"></i> 職涯投資選擇權</h6>
+                            <small class="text-muted">{{ client.loan_recommendation.isa.reason }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        <a href="{{ url_for('products') }}?client={{ client_id }}" class="btn btn-hcap-success w-100 mt-2">
+                            <i class="bi bi-calculator"></i> 查看產品詳情
+                        </a>
+                    </div>
+                </div>
+                
+                <!-- 風險因子（如果有） -->
+                {% if client.risk_factors and client.risk_factors|length > 0 %}
+                <div class="card shadow-sm mt-4 hcap-card card-danger">
+                    <div class="card-header bg-danger text-white">
+                        <i class="bi bi-exclamation-triangle"></i> 風險因子
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-group list-group-flush">
+                            {% for risk in client.risk_factors %}
+                            <li class="list-group-item">
+                                <i class="bi bi-exclamation-circle text-danger"></i> {{ risk }}
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- 中間：三維數據矩陣 -->
+            <div class="col-md-5">
+                <div class="card shadow-sm mb-4 hcap-card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-diagram-3"></i> 三維數據矩陣
+                    </div>
+                    <div class="card-body">
+                        <!-- 維度一：薪資數據 -->
+                        <div class="mb-4">
+                            <h5><i class="bi bi-cash-coin text-success"></i> 維度一：B2B薪資與合約</h5>
+                            <div class="chart-container" style="height: 200px;">
+                                <canvas id="salaryChart"></canvas>
+                            </div>
+                            <div class="row mt-2">
+                                <div class="col-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body p-2 text-center">
+                                            <small class="text-muted">經常性薪資</small>
+                                            <p class="mb-0 fw-bold">NT$ {{ (client.salary_data.base_salary | average) | intcomma }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="card bg-light">
+                                        <div class="card-body p-2 text-center">
+                                            <small class="text-muted">收入穩定度</small>
+                                            <p class="mb-0 fw-bold">{{ client.score_breakdown.income_stability.score }}%</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 維度二：雇主信譽 -->
+                        <div class="mb-4">
+                            <h5><i class="bi bi-building text-primary"></i> 維度二：雇主信譽權重</h5>
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-4 text-center">
+                                            <div class="display-6 fw-bold 
+                                                {% if client.employer_rating.grade == 'AA' %}text-success
+                                                {% elif client.employer_rating.grade == 'A' %}text-primary
+                                                {% elif client.employer_rating.grade == 'B' %}text-warning
+                                                {% else %}text-danger{% endif %}">
+                                                {{ client.employer_rating.grade }}
+                                            </div>
+                                            <small class="text-muted">評級</small>
+                                        </div>
+                                        <div class="col-8">
+                                            <p class="mb-1"><strong>企業信評：</strong>{{ client.employer_rating.outlook }}</p>
+                                            <p class="mb-1"><strong>產業：</strong>{{ client.employer_rating.industry }}</p>
+                                            <p class="mb-0"><strong>風險分數：</strong>{{ client.employer_rating.score }}/100</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 維度三：行為特徵 -->
+                        <div class="mb-4">
+                            <h5><i class="bi bi-activity text-warning"></i> 維度三：行為特徵數據</h5>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="mb-2">
+                                                <i class="bi bi-send-check display-4 
+                                                    {% if client.behavior_data.remittance_regularity >= 90 %}text-success
+                                                    {% elif client.behavior_data.remittance_regularity >= 80 %}text-warning
+                                                    {% else %}text-danger{% endif %}"></i>
+                                            </div>
+                                            <h6>跨境匯款規律性</h6>
+                                            <div class="progress" style="height: 20px;">
+                                                <div class="progress-bar 
+                                                    {% if client.behavior_data.remittance_regularity >= 90 %}bg-success
+                                                    {% elif client.behavior_data.remittance_regularity >= 80 %}bg-warning
+                                                    {% else %}bg-danger{% endif %}" 
+                                                    style="width: {{ client.behavior_data.remittance_regularity }}%">
+                                                    {{ client.behavior_data.remittance_regularity }}%
+                                                </div>
+                                            </div>
+                                            <small class="text-muted">責任感指標</small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <div class="card h-100">
+                                        <div class="card-body text-center">
+                                            <div class="mb-2">
+                                                <i class="bi bi-mic display-4 
+                                                    {% if client.behavior_data.voice_ai_risk == '低風險' %}text-success
+                                                    {% elif client.behavior_data.voice_ai_risk == '中風險' %}text-warning
+                                                    {% else %}text-danger{% endif %}"></i>
+                                            </div>
+                                            <h6>AI語音測謊</h6>
+                                            <span class="badge 
+                                                {% if client.behavior_data.voice_ai_risk == '低風險' %}bg-success
+                                                {% elif client.behavior_data.voice_ai_risk == '中風險' %}bg-warning
+                                                {% else %}bg-danger{% endif %} fs-6">
+                                                {{ client.behavior_data.voice_ai_risk }}
+                                            </span>
+                                            <p class="mt-2 small text-muted">反欺詐指標</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 右側：H-CAP Score 拆解 -->
+            <div class="col-md-4">
+                <div class="card shadow-sm hcap-card">
+                    <div class="card-header bg-primary text-white">
+                        <i class="bi bi-pie-chart"></i> H-CAP Score 模型拆解
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            <div style="width: 250px; height: 250px; margin: 0 auto;">
+                                <canvas id="scoreChart"></canvas>
+                            </div>
+                        </div>
+                        
+                        <!-- 評分細項 -->
+                        {% for key, item in client.score_breakdown.items() %}
+                        <div class="score-item mb-3 
+                            {% if key == 'repayment_capacity' %}score-repayment
+                            {% elif key == 'income_stability' %}score-stability
+                            {% elif key == 'repayment_willingness' %}score-willingness
+                            {% else %}score-external{% endif %}">
+                            <div class="d-flex justify-content-between mb-1">
+                                <span>
+                                    {% if key == 'repayment_capacity' %}
+                                        <i class="bi bi-calculator text-success"></i> 償債能力
+                                    {% elif key == 'income_stability' %}
+                                        <i class="bi bi-graph-up text-primary"></i> 收入穩定度
+                                    {% elif key == 'repayment_willingness' %}
+                                        <i class="bi bi-heart-pulse text-warning"></i> 還款意願
+                                    {% else %}
+                                        <i class="bi bi-globe text-danger"></i> 外部風險
+                                    {% endif %}
+                                    <small class="text-muted">({{ item.weight }}%)</small>
+                                </span>
+                                <span class="fw-bold">{{ item.score }}/100</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar 
+                                    {% if key == 'repayment_capacity' %}bg-success
+                                    {% elif key == 'income_stability' %}bg-primary
+                                    {% elif key == 'repayment_willingness' %}bg-warning
+                                    {% else %}bg-danger{% endif %}" 
+                                    style="width: {{ item.score }}%">
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                {% if key == 'repayment_capacity' %}
+                                    計算依據：債務所得比(DBR)分析
+                                {% elif key == 'income_stability' %}
+                                    合約穩定性 + 雇主品質
+                                {% elif key == 'repayment_willingness' %}
+                                    匯款規律性 + 行為數據
+                                {% else %}
+                                    匯率風險 + 政經環境
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endfor %}
+                        
+                        <hr>
+                        
+                        <!-- 風險等級 -->
+                        <div class="text-center">
+                            <div class="alert 
+                                {% if client.hcap_score >= 750 %}alert-primary
+                                {% elif client.hcap_score >= 700 %}alert-success
+                                {% elif client.hcap_score >= 650 %}alert-warning
+                                {% else %}alert-danger{% endif %}">
+                                <h5 class="mb-0">
+                                    <i class="bi 
+                                        {% if client.hcap_score >= 750 %}bi-award
+                                        {% elif client.hcap_score >= 700 %}bi-check-circle
+                                        {% elif client.hcap_score >= 650 %}bi-exclamation-triangle
+                                        {% else %}bi-x-octagon{% endif %}"></i>
+                                    {% if client.hcap_score >= 750 %}低風險客戶
+                                    {% elif client.hcap_score >= 700 %}中低風險客戶
+                                    {% elif client.hcap_score >= 650 %}中高風險客戶
+                                    {% else %}高風險客戶{% endif %}
+                                </h5>
+                                <p class="mb-0 small">
+                                    {% if client.hcap_score >= 750 %}月薪 15-18 倍額度，優惠利率
+                                    {% elif client.hcap_score >= 700 %}月薪 12-15 倍額度，標準審核
+                                    {% elif client.hcap_score >= 650 %}月薪 8-10 倍，需加強照會
+                                    {% else %}不予核貸，建議婉拒{% endif %}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- H-CAP Score 說明 -->
+                <div class="card shadow-sm hcap-card mt-4">
+                    <div class="card-body">
+                        <h6><i class="bi bi-info-circle"></i> H-CAP Score 說明</h6>
+                        <div class="small">
+                            <p><strong>850分滿分制：</strong></p>
+                            <div class="d-flex flex-wrap gap-1 mb-2">
+                                <span class="badge bg-primary">750+：低風險</span>
+                                <span class="badge bg-success">700+：中低風險</span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1">
+                                <span class="badge bg-warning">650+：中高風險</span>
+                                <span class="badge bg-danger">&lt;650：高風險</span>
+                            </div>
+                            <p class="mt-2 mb-0">分數基於三維數據矩陣，透過AI模型加權計算得出</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // 薪資圖表
+        const salaryCtx = document.getElementById('salaryChart').getContext('2d');
+        new Chart(salaryCtx, {
+            type: 'bar',
+            data: {
+                labels: {{ client.salary_data.labels | tojson }},
+                datasets: [{
+                    label: '底薪',
+                    data: {{ client.salary_data.base_salary | tojson }},
+                    backgroundColor: '#28a745',
+                    borderRadius: 5
+                }, {
+                    label: '加班費',
+                    data: {{ client.salary_data.overtime | tojson }},
+                    backgroundColor: '#17a2b8',
+                    borderRadius: 5
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: '新台幣'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return 'NT$ ' + value.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) {
+                                    label += ': ';
+                                }
+                                label += 'NT$ ' + context.parsed.y.toLocaleString();
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 評分圖表
+        const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+        new Chart(scoreCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['償債能力', '收入穩定度', '還款意願', '外部風險'],
+                datasets: [{
+                    data: [
+                        {{ client.score_breakdown.repayment_capacity.weight }},
+                        {{ client.score_breakdown.income_stability.weight }},
+                        {{ client.score_breakdown.repayment_willingness.weight }},
+                        {{ client.score_breakdown.external_risk.weight }}
+                    ],
+                    backgroundColor: [
+                        '#28a745', '#007bff', '#ffc107', '#dc3545'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label;
+                                const value = context.raw;
+                                const score = {
+                                    '償債能力': {{ client.score_breakdown.repayment_capacity.score }},
+                                    '收入穩定度': {{ client.score_breakdown.income_stability.score }},
+                                    '還款意願': {{ client.score_breakdown.repayment_willingness.score }},
+                                    '外部風險': {{ client.score_breakdown.external_risk.score }}
+                                }[label];
+                                return `${label}: ${value}% (分數: ${score}/100)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        // 動畫效果
+        document.addEventListener('DOMContentLoaded', function() {
+            const scoreItems = document.querySelectorAll('.score-item');
+            scoreItems.forEach((item, index) => {
+                item.style.animationDelay = `${index * 0.1}s`;
+                item.classList.add('fade-in-up');
+            });
+            
+            // 更新頁面標題顯示分數
+            document.title = `H-CAP Score: {{ client.hcap_score }} | 客戶信用畫像`;
+        });
+    </script>
+    
+    <style>
+        .alert-orange {
+            background-color: rgba(230, 126, 34, 0.1);
+            border-color: rgba(230, 126, 34, 0.3);
+            color: #e67e22;
+        }
+        .bg-orange {
+            background-color: #e67e22 !important;
+        }
+    </style>
+</body>
+</html>

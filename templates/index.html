@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>H-CAP | 普惠金融跨境信用評分系統</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+
+    <style>
+        body {
+            background: #f1f5f9;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem 0;
+        }
+
+        .main-container {
+            max-width: 1200px;
+            width: 100%;
+            padding: 0 15px;
+        }
+
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 24px;
+            padding: 3rem 2rem;
+            margin-bottom: 2.5rem;
+            box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        }
+
+        .hero-title {
+            color: white;
+            text-align: center;
+            margin-bottom: 0;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .hero-title h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            text-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .hero-title p {
+            font-size: 1.3rem;
+            opacity: 0.95;
+            font-weight: 300;
+        }
+
+        .portal-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+            gap: 2.5rem;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .portal-card {
+            background: white;
+            border-radius: 24px;
+            padding: 3rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.8s ease-out;
+            animation-fill-mode: both;
+            z-index: 1;
+        }
+
+        .portal-card:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .portal-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 6px;
+            transition: height 0.3s ease;
+            pointer-events: none;
+        }
+
+        .portal-card.customer::before {
+            background: linear-gradient(90deg, #10b981, #059669);
+        }
+
+        .portal-card.bank::before {
+            background: linear-gradient(90deg, #334155, #1e293b);
+        }
+
+        .portal-card:hover {
+            transform: translateY(-12px);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.25);
+            z-index: 2;
+        }
+
+        .portal-card:hover::before {
+            height: 100%;
+            opacity: 0.05;
+        }
+
+        .portal-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.5rem;
+            font-size: 2.5rem;
+            color: white;
+            transition: transform 0.3s ease;
+        }
+
+        .customer .portal-icon {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .bank .portal-icon {
+            background: linear-gradient(135deg, #334155, #1e293b);
+        }
+
+        .portal-card:hover .portal-icon {
+            transform: scale(1.1) rotate(5deg);
+        }
+
+        .portal-card h2 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #2d3748;
+        }
+
+        .portal-card p {
+            color: #718096;
+            font-size: 1.05rem;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .feature-list {
+            list-style: none;
+            padding: 0;
+            margin: 0 0 2rem 0;
+        }
+
+        .feature-list li {
+            padding: 0.75rem 0;
+            color: #4a5568;
+            display: flex;
+            align-items: center;
+            font-size: 1rem;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+
+        .feature-list i {
+            margin-right: 12px;
+            font-size: 1.1rem;
+        }
+
+        .customer .feature-list i {
+            color: #10b981;
+        }
+
+        .bank .feature-list i {
+            color: #334155;
+        }
+
+        .portal-btn {
+            width: 100%;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .customer .portal-btn {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .bank .portal-btn {
+            background: linear-gradient(135deg, #334155, #1e293b);
+        }
+
+        .portal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+
+        /* ── Demo 上手流程（水平） ── */
+        .intro-section {
+            margin-bottom: 2rem;
+            animation: fadeInUp 0.7s ease-out 0.1s both;
+        }
+        .intro-card {
+            background: white;
+            border-radius: 20px;
+            padding: 1.8rem 2.2rem;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.09);
+        }
+        .intro-card-title {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 1.6rem;
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+        }
+        .intro-card-title .title-icon {
+            width: 32px; height: 32px;
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.95rem; color: white; flex-shrink: 0;
+        }
+        /* 水平步驟列 */
+        .step-list {
+            list-style: none; padding: 0; margin: 0;
+            display: flex;
+            align-items: flex-start;
+            position: relative;
+        }
+        /* 連接線 */
+        .step-list::before {
+            content: '';
+            position: absolute;
+            top: 17px;
+            left: calc(10% + 2px);
+            right: calc(10% + 2px);
+            height: 2px;
+            background: linear-gradient(90deg, #667eea55, #764ba255);
+        }
+        .step-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 0 0.4rem;
+            position: relative;
+        }
+        .step-num {
+            width: 36px; height: 36px; border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white; font-size: 0.8rem; font-weight: 700;
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+            margin-bottom: 0.7rem;
+            position: relative; z-index: 1;
+            box-shadow: 0 2px 8px rgba(102,126,234,0.35);
+        }
+        .step-content strong {
+            display: block; font-size: 1rem; color: #2d3748;
+            font-weight: 700; line-height: 1.35;
+        }
+        @media (max-width: 750px) {
+            .step-list { flex-direction: column; gap: 0.6rem; }
+            .step-list::before { display: none; }
+            .step-item { flex-direction: row; text-align: left; gap: 0.8rem; align-items: flex-start; }
+            .step-num { margin-bottom: 0; flex-shrink: 0; }
+        }
+
+        .footer-info {
+            text-align: center;
+            color: #64748b;
+            margin-top: 3rem;
+            opacity: 0.9;
+            animation: fadeIn 1s ease-out 0.5s both;
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 語言選擇器 — 右下角 fixed */
+        .language-selector {
+            position: fixed;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            z-index: 1000;
+            background: white;
+            border-radius: 16px;
+            padding: 0.7rem 0.9rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.13);
+            display: flex;
+            flex-direction: column;
+            align-items: stretch;
+            gap: 0.35rem;
+            animation: fadeIn 0.8s ease-out 0.4s both;
+            min-width: 90px;
+        }
+        .lang-selector-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            text-align: center;
+            margin-bottom: 0.1rem;
+        }
+        .lang-btn {
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            color: #475569;
+            padding: 0.3rem 0.6rem;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 600;
+            font-size: 0.78rem;
+            text-align: center;
+            white-space: nowrap;
+        }
+        .lang-btn:hover {
+            background: #667eea15;
+            border-color: #667eea66;
+            color: #667eea;
+        }
+        .lang-btn.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-color: transparent;
+        }
+        @media (max-width: 992px) {
+            .portal-cards { grid-template-columns: 1fr; }
+            .language-selector { bottom: 1rem; right: 1rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- ══ Demo 上手流程 ══ -->
+        <div class="intro-section">
+            <div class="intro-card">
+                <div class="intro-card-title">
+                    <div class="title-icon" style="background: linear-gradient(135deg, #667eea, #764ba2);">
+                        <i class="fas fa-route"></i>
+                    </div>
+                    Demo 上手流程
+                </div>
+                <ol class="step-list">
+                    <li class="step-item">
+                        <div class="step-num">1</div>
+                        <div class="step-content">
+                            <strong>進入移工端<br>數位憑證核實</strong>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-num">2</div>
+                        <div class="step-content">
+                            <strong>語音 AI 驗證<br>（選填）</strong>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-num">3</div>
+                        <div class="step-content">
+                            <strong>提交申請<br>即時評分</strong>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-num">4</div>
+                        <div class="step-content">
+                            <strong>銀行端<br>查看新客戶</strong>
+                        </div>
+                    </li>
+                    <li class="step-item">
+                        <div class="step-num">5</div>
+                        <div class="step-content">
+                            <strong>雇主管理<br>&amp; 壓力測試</strong>
+                        </div>
+                    </li>
+                </ol>
+            </div>
+        </div>
+        <!-- ══════════════════════════ -->
+
+        <div class="portal-cards">
+            <!-- 移工端 -->
+            <div class="portal-card customer" onclick="window.location.href='/portal/customer'">
+                <div class="portal-icon">
+                    <i class="fas fa-user-circle"></i>
+                </div>
+                <h2>移工端</h2>
+                <p>快速申請貸款或信用卡，AI 智能審核，即刻獲得額度評估</p>
+
+                <ul class="feature-list">
+                    <li><i class="fas fa-hand-holding-usd"></i> 小額貸款申請</li>
+                    <li><i class="fas fa-credit-card"></i> 信用卡申請</li>
+                    <li><i class="fas fa-microphone-alt"></i> 語音 AI 身份驗證</li>
+                    <li><i class="fas fa-wallet"></i> 區塊鏈匯款記錄同步</li>
+                    <li><i class="fas fa-mobile-alt"></i> App 數位足跡監控</li>
+                </ul>
+
+                <button class="portal-btn">
+                    <span>進入申請</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+
+            <!-- 銀行端 -->
+            <div class="portal-card bank" onclick="window.location.href='/portal/bank'">
+                <div class="portal-icon">
+                    <i class="fas fa-building"></i>
+                </div>
+                <h2>銀行端</h2>
+                <p>全方位風控管理平台，客戶數據分析與監控，智能決策支援</p>
+
+                <ul class="feature-list">
+                    <li><i class="fas fa-users"></i> 客戶列表與管理</li>
+                    <li><i class="fas fa-chart-pie"></i> 風控儀表板</li>
+                    <li><i class="fas fa-shield-alt"></i> 實時風險監控</li>
+                    <li><i class="fas fa-flask"></i> 壓力測試與模擬</li>
+                    <li><i class="fas fa-cogs"></i> 系統架構與演算法</li>
+                </ul>
+
+                <button class="portal-btn">
+                    <span>進入管理</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="footer-info">
+            <p><i class="fas fa-info-circle me-2"></i>台灣金融科技創新競賽作品</p>
+            <p class="small">© 2026 H-CAP Team. Empowering Migrant Workers with Financial Inclusion.</p>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // 語言切換功能
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 移除所有 active 類
+                document.querySelectorAll('.lang-btn').forEach(b => {
+                    b.classList.remove('active');
+                    // 移除勾選圖標
+                    const icon = b.querySelector('i');
+                    if (icon) icon.remove();
+                });
+
+                // 添加 active 類到當前按鈕
+                this.classList.add('active');
+                // 添加勾選圖標
+                const checkIcon = document.createElement('i');
+                checkIcon.className = 'fas fa-check me-1';
+                this.insertBefore(checkIcon, this.firstChild);
+
+                // 儲存語言選擇
+                const lang = this.dataset.lang;
+                localStorage.setItem('hcap_language', lang);
+
+                // 這裡可以添加實際的翻譯邏輯
+                console.log('切換語言至:', lang);
+
+                // TODO: 實作真正的翻譯功能
+                // 可以使用 i18n 庫或者後端 API
+            });
+        });
+
+        // 頁面載入時恢復語言選擇
+        const savedLang = localStorage.getItem('hcap_language');
+        if (savedLang) {
+            const btn = document.querySelector(`[data-lang="${savedLang}"]`);
+            if (btn) {
+                btn.click();
+            }
+        }
+    </script>
+    <!-- 語言選擇器 — 右下角 -->
+    <div class="language-selector">
+        <div class="lang-selector-label"><i class="fas fa-globe me-1"></i>語言</div>
+        <button class="lang-btn active" data-lang="zh-TW">繁中</button>
+        <button class="lang-btn" data-lang="en">EN</button>
+        <button class="lang-btn" data-lang="vi">Việt</button>
+        <button class="lang-btn" data-lang="id">Bahasa</button>
+        <button class="lang-btn" data-lang="th">ไทย</button>
+    </div>
+
+    <div id="google_translate_element" style="display:none;"></div>
+
+    <script type="text/javascript">
+    function googleTranslateElementInit() {
+    new google.translate.TranslateElement({
+        pageLanguage: 'zh-TW',
+        // 對應你按鈕上的語言
+        includedLanguages: 'zh-TW,en,vi,id,th',
+        autoDisplay: false
+    }, 'google_translate_element');
+    }
+    </script>
+    <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+    <style>
+        /* 隱藏 Google 翻譯產生的頂部工具欄 */
+        .goog-te-banner-frame.skiptranslate, .goog-te-gadget-icon { display: none !important; }
+        body { top: 0px !important; }
+        .goog-te-balloon-frame { display: none !important; }
+        /* 修正翻譯後可能出現的字體跑版 */
+        font { background-color: transparent !important; box-shadow: none !important; }
+    </style>
+    <script>
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // 1. 原有的 UI 切換邏輯 (維持你的 CSS 效果)
+                document.querySelectorAll('.lang-btn').forEach(b => {
+                    b.classList.remove('active');
+                    const icon = b.querySelector('i');
+                    if (icon) icon.remove();
+                });
+                this.classList.add('active');
+                const checkIcon = document.createElement('i');
+                checkIcon.className = 'fas fa-check me-1';
+                this.insertBefore(checkIcon, this.firstChild);
+
+                // 2. 🔥 核心：驅動 Google 翻譯
+                const langMap = {
+                    'zh-TW': 'Chinese (Traditional)',
+                    'en': 'English',
+                    'vi': 'Vietnamese',
+                    'id': 'Indonesian',
+                    'th': 'Thai'
+                };
+                
+                const targetLang = langMap[this.dataset.lang];
+                const translateCombo = document.querySelector('.goog-te-combo');
+                
+                if (translateCombo) {
+                    translateCombo.value = this.dataset.lang; // 嘗試直接設定值
+                    translateCombo.dispatchEvent(new Event('change')); // 觸發翻譯
+                }
+                
+                console.log('H-CAP 系統自動翻譯至:', targetLang);
+            });
+        });
+    </script>
+</body>
+</html>
