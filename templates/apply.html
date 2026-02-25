@@ -386,7 +386,8 @@
     };
 
     function submitApplication() {
-        if (localStorage.getItem('apply_arc_verified') !== 'true') { alert('請先完成憑證驗證'); return; }
+        if (localStorage.getItem('apply_arc_verified') !== 'true') { alert('請先完成居留證憑證驗證'); return; }
+        if (localStorage.getItem('apply_contract_verified') !== 'true') { alert('請先完成勞動契約憑證驗證'); return; }
         const btn = document.querySelector('.btn-submit');
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-cog fa-spin me-2"></i> H-CAP 運算中...'; btn.disabled = true;
@@ -411,7 +412,8 @@
             document.getElementById('resultDetails').innerHTML = `<div class="row"><div class="col-7">基礎分:</div><div class="col-5">${data.details.base_score}</div><div class="col-7 fs-5">H-CAP Score:</div><div class="col-5 fs-5 text-primary">${data.score}</div></div>`;
             localStorage.removeItem('voice_done_score');
             modal.show(); btn.innerHTML = originalText; btn.disabled = false;
-        });
+        })
+        .catch(() => { alert('送出失敗，請檢查網路後重試'); btn.innerHTML = originalText; btn.disabled = false; });
     }
 
     // 生成電子存摺交易明細

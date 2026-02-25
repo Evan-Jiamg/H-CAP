@@ -268,11 +268,13 @@
             }
             score = Math.max(40, Math.min(99, Math.round(score)));
 
-            // 1. 上傳至銀行資料庫
+            // 1. 上傳至銀行資料庫（client_id 由 URL 參數決定，預設 custom）
+            const clientId = new URLSearchParams(window.location.search).get('client_id') || 'custom';
             fetch('/api/upload_remittance', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ 
+                body: JSON.stringify({
+                    client_id: clientId,
                     regularity_rate: score,
                     avg_amount: parseInt(document.getElementById('totalDisplay').innerText.replace(/,/g, '')) / transactions.length,
                     metrics: metrics

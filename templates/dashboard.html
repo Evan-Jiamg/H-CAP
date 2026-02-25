@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
-    <!-- 放在每個 HTML 檔案的 head 區塊 -->
-    <script src="{{ url_for('static', filename='js/navbar-injector.js') }}" defer></script>
+    <!-- 非嵌入模式才注入 navbar -->
+    {% if not embedded %}<script src="{{ url_for('static', filename='js/navbar-injector.js') }}" defer></script>{% endif %}
 </head>
 <body>
     <!-- 統一的導航列（嵌入模式下隱藏）-->

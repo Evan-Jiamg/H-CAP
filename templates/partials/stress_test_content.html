@@ -308,6 +308,8 @@
             external_risk: { score: {{ active_breakdown.external_risk.score }} }
         }
     };
+    // 依模型選擇正確的維度權重（貸款 vs 信用卡）
+    const stWeights = {{ model | tojson }} === 'card' ? [0.2, 0.3, 0.3, 0.2] : [0.4, 0.3, 0.2, 0.1];
 
     // ===== 壓力情境定義 =====
     const stScenarios = {
@@ -337,7 +339,7 @@
         const s_will = Math.max(20, Math.round(b.repayment_willingness.score + (imp.remittance * (1 + adj.remit) * 0.9)));
         const s_ext = Math.max(20, Math.round(b.external_risk.score + imp.external_risk));
 
-        const final = Math.round((s_cap * 0.4 + s_inc * 0.3 + s_will * 0.2 + s_ext * 0.1) * 8.5);
+        const final = Math.round((s_cap * stWeights[0] + s_inc * stWeights[1] + s_will * stWeights[2] + s_ext * stWeights[3]) * 8.5);
         return { cap: s_cap, inc: s_inc, will: s_will, ext: s_ext, final: Math.max(300, final) };
     }
 

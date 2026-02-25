@@ -318,9 +318,7 @@
             if (activeAnomalies.has('wifi')) s_wifi = 5;
             if (activeAnomalies.has('batt')) s_batt = 5;
 
-            let rawScore = s_math + s_wifi + s_batt; 
-
-            if (activeAnomalies.has('math')) rawScore -= 20;
+            let rawScore = s_math + s_wifi + s_batt;
 
             if (l2_active) rawScore += 10; 
             if (l3_active) {

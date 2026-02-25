@@ -135,7 +135,7 @@
 
                         {% set sl = client.loan_recommendation.survival_loan %}
                         {% if sl.approved %}
-                        {% if sl.term and sl.interest_rate %}{% set r = sl.interest_rate / 1200 %}{% set monthly = (sl.max_amount * r / (1 - (1 + r) ** (-sl.term))) | int %}{% endif %}
+                        {% if sl.term and sl.term > 0 and sl.interest_rate %}{% set r = sl.interest_rate / 1200 %}{% set monthly = (sl.max_amount * r / (1 - (1 + r) ** (-sl.term))) | int %}{% endif %}
                         <div class="p-2 rounded border border-success mb-2" style="border-left: 4px solid #198754 !important;">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <span class="fw-bold"><i class="bi bi-check-circle-fill text-success me-1"></i>核准放貸</span>

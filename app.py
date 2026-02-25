@@ -54,7 +54,7 @@ AudioSegment.ffprobe = os.path.join(base_dir, "ffprobe.exe")
 # =============================================================
 
 app = Flask(__name__)
-app.secret_key = os.getenv('FLASK_SECRET_KEY', 'hcap-demo-secret-key-2023')
+app.secret_key = 'hcap-demo-secret-key-2023'
 app.config['SESSION_TYPE'] = 'filesystem'
 app.config['UPLOAD_FOLDER'] = os.path.join(base_dir, 'static', 'uploads')
 
@@ -898,7 +898,7 @@ def generate_custom_client(form_data, salary_data_override=None):
         elif total_score >= 700: max_amount = 40000; interest_rate = 10.5
         elif total_score >= 650: max_amount = 30000; interest_rate = 12.5
     
-    country = "印尼" if "母國匯率波動大" in risk_factors else "越南"
+    country = form_data.get('country', '越南')
     return {
         "id": f"CUSTOM-{int(total_score)}", "name": f"自定義客戶 - {country}籍", "country": country,
         "employer": score_data['employer_name'], "job_title": "技術員", "contract_remaining": score_data['contract_months'],
@@ -1458,8 +1458,8 @@ def get_employers():
 
 @app.route('/api/employers/add', methods=['POST'])
 def add_employer():
-    data = request.get_json()
-    name = data.get('name', '').strip()
+    payload = request.get_json()
+    name = payload.get('name', '').strip()
     if not name:
         return jsonify({"success": False, "error": "名稱不可為空"}), 400
     for emp in EMPLOYERS['confirmed']:
@@ -1468,11 +1468,11 @@ def add_employer():
     new_id = f"EMP-{len(EMPLOYERS['confirmed']) + len(EMPLOYERS['pending']) + 1:03d}"
     new_emp = {
         "id": new_id, "name": name,
-        "type": data.get('type', 'medium_tech'),
-        "rating": data.get('rating', 'B'),
-        "industry": data.get('industry', '待分類'),
-        "employees": int(data.get('employees', 0)),
-        "outlook": data.get('outlook', '待評估')
+        "type": payload.get('type', 'medium_tech'),
+        "rating": payload.get('rating', 'B'),
+        "industry": payload.get('industry', '待分類'),
+        "employees": int(payload.get('employees', 0)),
+        "outlook": payload.get('outlook', '待評估')
     }
     EMPLOYERS['confirmed'].append(new_emp)
     return jsonify({"success": True, "employer": new_emp})
@@ -1579,9 +1579,9 @@ def delete_employer():
 # ========== 其他 API ==========
 @app.route('/api/login_check', methods=['POST'])
 def login_check():
-    data = request.get_json()
-    if data.get('username') == "ABC" and data.get('password') == "1234":
-        client_id = data.get('client_id', 'low_risk')
+    payload = request.get_json()
+    if payload.get('username') == "ABC" and payload.get('password') == "1234":
+        client_id = payload.get('client_id', 'low_risk')
         get_client_db(client_id)['applicant_info']['login_verified'] = True
         return jsonify({"success": True})
     return jsonify({"success": False, "message": "帳號或密碼錯誤"})
@@ -1767,7 +1767,7 @@ def apply_credit_card():
             "id": "CREDIT-APP-001",
             "name": form.get('english_name', 'Guest'),
             "country": form.get('country', 'Vietnam'),
-            "employer": algo_input_data['employerType'],
+            "employer": company_name or algo_input_data['employerType'],
             "company_name": company_name,
             "job_title": "作業員",
             "contract_remaining": contract_months,
@@ -1932,10 +1932,13 @@ def apply_loan():
             card_hcap_score = min(850, card_hcap_score + voice_bonus)
             voice_label = f"低風險 (已驗證 {voice_avg}分)" if voice_avg >= 70 else f"中風險 (已驗證 {voice_avg}分)"
 
-        # 計算 DBR (仲裁: 月薪 * 0.4 / 月付金 * 100)
-        monthly_payment = npf.pmt(rate=0.06/12, nper=loan_term, pv=-loan_amount)
-        dbr_ratio = (base_salary * 0.4) / abs(monthly_payment) * 100 if monthly_payment != 0 else 0
-        dbr_score = min(100, dbr_ratio * 2)
+        # 計算 DBR：依貸款金額決定利率，月付金 / 月薪 * 100
+        if loan_amount <= 30000: loan_rate = 0.105
+        elif loan_amount <= 40000: loan_rate = 0.125
+        else: loan_rate = 0.15
+        monthly_payment = npf.pmt(rate=loan_rate/12, nper=loan_term, pv=-loan_amount)
+        dbr_ratio = abs(monthly_payment) / base_salary * 100 if base_salary > 0 else 100
+        dbr_score = 90 if dbr_ratio <= 25 else (80 if dbr_ratio <= 30 else (65 if dbr_ratio <= 40 else 45))
 
         # 5. 結果判定
         status = "review"
@@ -2187,7 +2190,7 @@ def verify_credential():
         if 'name' in user_input and 'worker_name' not in user_input:
             user_input['worker_name'] = user_input['name']
         v_data = session.get('credential_verification')
-        if not v_data: return jsonify({"success": True, "error": "No Session"})
+        if not v_data: return jsonify({"success": False, "error": "No Session"})
 
         headers = {'Access-Token': VERIFIER_ACCESS_TOKEN, 'Content-Type': 'application/json'}
         arc_done = v_data.get('arc_verified', False)
@@ -2389,7 +2392,7 @@ def calculate_isa_scenario(scenario):
             bank_cashflow = [-30000] 
             
             # 沒收保證金 (假設 5000)
-            bank_cashflow.append(5000)
+            bank_cashflow.append(5000) 
             
             # 後面幾期都是 0 (呆帳)
             for _ in range(4): bank_cashflow.append(0)

@@ -341,7 +341,8 @@
                     msgEl.textContent = 'DBR過高，建議降低額度';
                     msgEl.className = 'fw-bold fs-5 text-danger';
                 }
-            });
+            })
+            .catch(() => { document.getElementById('dbrMessage').textContent = '計算失敗，請重試'; });
         }
         calculateLoan();
     });
@@ -395,7 +396,8 @@
                 }
 
                 updateChart(data.bank_cashflow);
-            });
+            })
+            .catch(() => { console.error('ISA 情境載入失敗'); });
     }
 
     function updateChart(cashflow) {
