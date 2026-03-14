@@ -2,11 +2,13 @@
 
 > 台灣移工普惠金融系統 · 永豐金控商業競賽提案
 
-![Python](https://img.shields.io/badge/Python-639922?style=flat-square&logo=python&logoColor=white)
-![Flask](https://img.shields.io/badge/Flask-888780?style=flat-square&logo=flask&logoColor=white)
-![HTML](https://img.shields.io/badge/HTML-D85A30?style=flat-square&logo=html5&logoColor=white)
-![Hugging Face](https://img.shields.io/badge/Hugging_Face-D4537E?style=flat-square&logo=huggingface&logoColor=white)
-![Vercel](https://img.shields.io/badge/Vercel-444441?style=flat-square&logo=vercel&logoColor=white)
+<p>
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/python/python-original.svg" height="40"/> Python &nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/flask/flask-original.svg" height="40"/> Flask &nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/html5/html5-original.svg" height="40"/> HTML5 &nbsp;&nbsp;
+  <img src="https://huggingface.co/front/assets/huggingface_logo.svg" height="40"/> Hugging Face &nbsp;&nbsp;
+  <img src="https://cdn.jsdelivr.net/gh/devicons/devicon/icons/vercel/vercel-original.svg" height="40"/> Vercel
+</p>
 
 ## Overview
 
